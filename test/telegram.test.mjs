@@ -9,7 +9,8 @@ test('bot setup is owner-only and webhook authenticates Telegram requests',async
  try{
   assert.equal((await setup('client')).status,403);assert.equal(calls.length,0);
   assert.equal((await setup('owner')).status,200);
-  assert.deepEqual(calls.map(c=>c.method),['setWebhook','setChatMenuButton','setMyCommands','getWebhookInfo']);
+  assert.deepEqual(calls.map(c=>c.method),['setWebhook','setChatMenuButton','setMyCommands','setMyDescription','setMyShortDescription','getWebhookInfo']);
+  assert.ok(calls[3].payload.description.length<=512);assert.ok(calls[4].payload.short_description.length<=120);
   const secret=calls[0].payload.secret_token;
   assert.match(secret,/^[a-f0-9]{64}$/);assert.notEqual(secret,env.BOT_TOKEN);
   const webhook=(token,command='/start',type='private')=>worker.fetch(new Request('https://example.com/api/telegram/webhook',{method:'POST',headers:{'X-Telegram-Bot-Api-Secret-Token':token},body:JSON.stringify({message:{chat:{id:123,type},text:command}})}),env);

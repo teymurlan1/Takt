@@ -76,6 +76,8 @@ export async function api(req,env){
   await telegram(env,'setWebhook',{url:new URL('/api/telegram/webhook',appUrl).href,secret_token:secret,allowed_updates:['message']});
   await telegram(env,'setChatMenuButton',{menu_button:{type:'web_app',text:'Открыть Такт',web_app:{url:appUrl.href}}});
   await telegram(env,'setMyCommands',{commands:[{command:'start',description:'Открыть Такт'},{command:'help',description:'Как пользоваться'},{command:'id',description:'Мой Telegram ID'}]});
+  await telegram(env,'setMyDescription',{description:"Такт — услуги и запись в вашем ритме.\n\nДля клиентов\n📅 Выбирайте компанию, услугу и свободное время.\n📋 Следите за своими записями и отменяйте их в приложении.\n🔔 Получайте подтверждения и напоминания в Telegram.\n\nДля компаний\n💼 Управляйте заявками, услугами, ценами и часами работы в своём кабинете.\n\nКрасота · Клининг · Автосервис\nСейчас доступна пилотная версия с тестовыми компаниями.\n\nНажмите «Открыть приложение», чтобы начать."});
+  await telegram(env,'setMyShortDescription',{short_description:'Такт — запись на услуги в Telegram. Клиентам — удобное время и напоминания, компаниям — управление заявками.'});
   const info=await telegram(env,'getWebhookInfo',{});
   if(info.url!==new URL('/api/telegram/webhook',appUrl).href)fail(502,'Не удалось проверить подключение. Повторите попытку.');
   return json({ok:true});
