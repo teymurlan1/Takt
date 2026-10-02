@@ -29,8 +29,37 @@ async function notices(db,b,event,guard=null){
  const members=await db.prepare('SELECT user_id FROM memberships WHERE company_id=?').bind(b.company_id).all();
  return [queue(db,`${b.id}:${event}:client`,b.user_id,msg,guard),...members.results.filter(m=>m.user_id!==b.user_id).map(m=>queue(db,`${b.id}:${event}:${m.user_id}`,m.user_id,`${msg}\nКлиент: ${b.name}\nТелефон: ${b.phone}`,guard))];
 }
+
+async function webhookSecret(env){
+ if(!env.BOT_TOKEN)fail(503,'Токен бота не настроен');
+ const enc=new TextEncoder();
+ const key=await crypto.subtle.importKey('raw',enc.encode(env.BOT_TOKEN),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+ return Array.from(new Uint8Array(await crypto.subtle.sign('HMAC',key,enc.encode('takt:telegram-webhook:v1'))),b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function telegram(env,method,payload){
+ let data;
+ try{const r=await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/${method}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(10000)});data=await r.json()}catch{fail(502,'Telegram временно недоступен. Повторите подключение.')}
+ if(!data.ok)fail(502,'Telegram не принял настройки. Проверьте BOT_TOKEN и повторите подключение.');
+ return data.result;
+}
+async function webhook(req,env){
+ if(req.method!=='POST')return json({error:'Method not allowed'},405);
+ const expected=await webhookSecret(env),given=req.headers.get('X-Telegram-Bot-Api-Secret-Token')||'';
+ let diff=expected.length^given.length;for(let i=0;i<expected.length;i++)diff|=expected.charCodeAt(i)^(given.charCodeAt(i)||0);
+ if(diff)fail(403,'Forbidden');
+ const update=await body(req),m=update.message;
+ if(m?.chat?.type!=='private'||!Number.isSafeInteger(m.chat.id)||m.chat.id<=0)return json({ok:true});
+ const command=typeof m.text==='string'?m.text.trim().split(/\s+/)[0].split('@')[0]:'';
+ if(!['/start','/help','/id'].includes(command))return json({ok:true});
+ const appUrl=new URL(env.APP_URL||new URL(req.url).origin);
+ if(appUrl.protocol!=='https:')fail(503,'Укажите HTTPS адрес приложения');
+ const message=command==='/id'?`Ваш Telegram ID: ${m.chat.id}`:'Добро пожаловать в Такт!\n\nВыбирайте услуги и удобное время, управляйте своими записями — всё в одном приложении.\n\nНажмите кнопку ниже, чтобы начать.';
+ return json({method:'sendMessage',chat_id:m.chat.id,text:message,reply_markup:{inline_keyboard:[[{text:'Открыть Такт',web_app:{url:appUrl.href}}]]}});
+}
+
 export async function api(req,env){
  const url=new URL(req.url),path=url.pathname,db=env.DB;
+ if(path==='/api/telegram/webhook')return webhook(req,env);
  if(path==='/api/health')return json({ok:true,version:'0.1.0'});
  if(!db)fail(503,'База ещё не подключена');
  if(path==='/api/companies'&&req.method==='GET'){
@@ -39,6 +68,18 @@ export async function api(req,env){
   return json(cs.results.map(c=>({...c,services:ss.results.filter(s=>s.company_id===c.id)})));
  }
  let user;try{user=await identify(req,env)}catch{fail(401,'Откройте приложение через Telegram. Если оно уже открыто — закройте и откройте снова.')}
+ if(path==='/api/telegram/setup'&&req.method==='POST'){
+  if(!owners(env).includes(user.id))fail(403,'Только владелец сервиса может подключить бота');
+  const appUrl=new URL(env.APP_URL||url.origin);
+  if(appUrl.protocol!=='https:')fail(400,'Подключение доступно на опубликованном HTTPS сайте');
+  const secret=await webhookSecret(env);
+  await telegram(env,'setWebhook',{url:new URL('/api/telegram/webhook',appUrl).href,secret_token:secret,allowed_updates:['message']});
+  await telegram(env,'setChatMenuButton',{menu_button:{type:'web_app',text:'Открыть Такт',web_app:{url:appUrl.href}}});
+  await telegram(env,'setMyCommands',{commands:[{command:'start',description:'Открыть Такт'},{command:'help',description:'Как пользоваться'},{command:'id',description:'Мой Telegram ID'}]});
+  const info=await telegram(env,'getWebhookInfo',{});
+  if(info.url!==new URL('/api/telegram/webhook',appUrl).href)fail(502,'Не удалось проверить подключение. Повторите попытку.');
+  return json({ok:true});
+ }
  if(path==='/api/me'){
   const memberships=await db.prepare('SELECT company_id FROM memberships WHERE user_id=?').bind(user.id).all();
   return json({...user,owner:owners(env).includes(user.id),companies:memberships.results.map(m=>m.company_id)});
