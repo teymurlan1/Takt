@@ -53,21 +53,50 @@ async function webhook(req,env){
  if(!['/start','/help','/id'].includes(command))return json({ok:true});
  const appUrl=new URL(env.APP_URL||new URL(req.url).origin);
  if(appUrl.protocol!=='https:')fail(503,'Укажите HTTPS адрес приложения');
- const message=command==='/id'?`Ваш Telegram ID: ${m.chat.id}`:'Добро пожаловать в Такт!\n\nВыбирайте услуги и удобное время, управляйте своими записями — всё в одном приложении.\n\nНажмите кнопку ниже, чтобы начать.';
+ const message=command==='/id'?`Ваш Telegram ID: ${m.chat.id}`:'Такт — запись в вашем ритме.\n\nМастерам: создайте свой кабинет, добавьте услуги и отправьте клиентам личную ссылку.\n\nКлиентам: записывайтесь по ссылке мастера, следите за визитами и получайте напоминания.\n\nВсё начинается в приложении ↓';
  return json({method:'sendMessage',chat_id:m.chat.id,text:message,reply_markup:{inline_keyboard:[[{text:'Открыть Такт',web_app:{url:appUrl.href}}]]}});
 }
 
 export async function api(req,env){
  const url=new URL(req.url),path=url.pathname,db=env.DB;
  if(path==='/api/telegram/webhook')return webhook(req,env);
- if(path==='/api/health')return json({ok:true,version:'0.1.0'});
+ if(path==='/api/health')return json({ok:true,version:'0.2.0'});
  if(!db)fail(503,'База ещё не подключена');
- if(path==='/api/companies'&&req.method==='GET'){
-  const cs=await db.prepare('SELECT * FROM companies WHERE active=1 ORDER BY rowid').all();
-  const ss=await db.prepare('SELECT * FROM services WHERE active=1 ORDER BY rowid').all();
-  return json(cs.results.map(c=>({...c,services:ss.results.filter(s=>s.company_id===c.id)})));
+ const publicCompany=path.match(/^\/api\/companies\/([a-z0-9-]+)$/);
+ if(publicCompany&&req.method==='GET'){
+  const c=await company(db,publicCompany[1]);
+  const services=(await db.prepare('SELECT * FROM services WHERE company_id=? AND active=1 ORDER BY rowid').bind(c.id).all()).results;
+  return json({...c,services});
  }
  let user;try{user=await identify(req,env)}catch{fail(401,'Откройте приложение через Telegram. Если оно уже открыто — закройте и откройте снова.')}
+ if(path==='/api/companies'&&req.method==='GET'){
+  const cs=owners(env).includes(user.id)?await db.prepare('SELECT * FROM companies WHERE active=1 ORDER BY rowid').all():await db.prepare('SELECT c.* FROM companies c JOIN memberships m ON m.company_id=c.id WHERE m.user_id=? AND c.active=1 ORDER BY c.rowid').bind(user.id).all();
+  const result=[];for(const c of cs.results){const services=(await db.prepare('SELECT * FROM services WHERE company_id=? AND active=1 ORDER BY rowid').bind(c.id).all()).results;result.push({...c,services})}
+  return json(result);
+ }
+ if(path==='/api/register'&&req.method==='POST'){
+  const b=await body(req),name=text(b.name,80),address=text(b.address,200),phone=text(b.phone,24),tagline=text(b.tagline,160),serviceName=text(b.service_name,120);
+  if(name.length<2||!['beauty','cleaning','auto'].includes(b.category)||serviceName.length<2)fail(400,'Укажите название, сферу и первую услугу');
+  if(!Number.isInteger(b.open_hour)||!Number.isInteger(b.close_hour)||b.open_hour<0||b.close_hour>24||b.open_hour>=b.close_hour)fail(400,'Проверьте часы работы');
+  if(!Number.isInteger(b.price)||b.price<0||b.price>1000000||!Number.isInteger(b.duration)||b.duration<30||b.duration>480||b.duration%30)fail(400,'Проверьте цену и длительность (шаг 30 минут)');
+  // Stable ID makes retries and concurrent registration atomic: one new business per account.
+  const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('takt-business:'+user.id));
+  const id='m-'+Array.from(new Uint8Array(hash),x=>x.toString(16).padStart(2,'0')).join('').slice(0,32);
+  const existing=await db.prepare('SELECT id FROM companies WHERE id=?').bind(id).first();if(existing)return json({id});
+  await db.batch([
+   db.prepare('INSERT OR IGNORE INTO companies(id,name,category,tagline,address,phone,open_hour,close_hour) VALUES(?,?,?,?,?,?,?,?)').bind(id,name,b.category,tagline||'Запись в удобное для вас время',address,phone,b.open_hour,b.close_hour),
+   db.prepare('INSERT OR IGNORE INTO memberships(company_id,user_id) VALUES(?,?)').bind(id,user.id),
+   db.prepare('INSERT OR IGNORE INTO services(id,company_id,name,price,duration) VALUES(?,?,?,?,?)').bind('s-'+id,id,serviceName,b.price,b.duration)
+  ]);
+  return json({id},201);
+ }
+ if(path==='/api/services'&&req.method==='POST'){
+  const b=await body(req);if(!await access(db,env,user,b.company_id))fail(403,'Нет доступа');await company(db,b.company_id);
+  const name=text(b.name,120);if(name.length<2||!Number.isInteger(b.price)||b.price<0||b.price>1000000||!Number.isInteger(b.duration)||b.duration<30||b.duration>480||b.duration%30)fail(400,'Проверьте цену и длительность (шаг 30 минут)');
+  if(!/^[a-zA-Z0-9-]{8,80}$/.test(b.request_key||''))fail(400,'Повторите добавление услуги');
+  const id=b.company_id+'-'+b.request_key.toLowerCase();
+  await db.prepare('INSERT OR IGNORE INTO services(id,company_id,name,price,duration) VALUES(?,?,?,?,?)').bind(id,b.company_id,name,b.price,b.duration).run();return json({id},201);
+ }
  if(path==='/api/telegram/setup'&&req.method==='POST'){
   if(!owners(env).includes(user.id))fail(403,'Только владелец сервиса может подключить бота');
   const appUrl=new URL(env.APP_URL||url.origin);
@@ -76,7 +105,7 @@ export async function api(req,env){
   await telegram(env,'setWebhook',{url:new URL('/api/telegram/webhook',appUrl).href,secret_token:secret,allowed_updates:['message']});
   await telegram(env,'setChatMenuButton',{menu_button:{type:'web_app',text:'Открыть Такт',web_app:{url:appUrl.href}}});
   await telegram(env,'setMyCommands',{commands:[{command:'start',description:'Открыть Такт'},{command:'help',description:'Как пользоваться'},{command:'id',description:'Мой Telegram ID'}]});
-  await telegram(env,'setMyDescription',{description:"Такт — услуги и запись в вашем ритме.\n\nДля клиентов\n📅 Выбирайте компанию, услугу и свободное время.\n📋 Следите за своими записями и отменяйте их в приложении.\n🔔 Получайте подтверждения и напоминания в Telegram.\n\nДля компаний\n💼 Управляйте заявками, услугами, ценами и часами работы в своём кабинете.\n\nКрасота · Клининг · Автосервис\nСейчас доступна пилотная версия с тестовыми компаниями.\n\nНажмите «Открыть приложение», чтобы начать."});
+  await telegram(env,'setMyDescription',{description:"Такт — ваше дело в вашем ритме.\n\nДля мастеров и компаний\nСоздайте кабинет, добавьте услуги и часы работы. Отправьте клиентам свою ссылку на запись. Управляйте заявками в журнале.\n\nДля клиентов\nОткройте ссылку мастера, выберите услугу и время. Ваши записи и история — в приложении, подтверждения и напоминания — в Telegram.\n\nНажмите «Открыть приложение», чтобы начать."});
   await telegram(env,'setMyShortDescription',{short_description:'Такт — запись на услуги в Telegram. Клиентам — удобное время и напоминания, компаниям — управление заявками.'});
   const info=await telegram(env,'getWebhookInfo',{});
   if(info.url!==new URL('/api/telegram/webhook',appUrl).href)fail(502,'Не удалось проверить подключение. Повторите попытку.');
@@ -132,9 +161,9 @@ export async function api(req,env){
  const companyMatch=path.match(/^\/api\/companies\/([a-z0-9-]+)$/);
  if(companyMatch&&req.method==='PATCH'){
   const id=companyMatch[1];if(!await access(db,env,user,id))fail(403,'Нет доступа');
-  const c=await company(db,id),b=await body(req),name=text(b.name,80),address=text(b.address,200),phone=text(b.phone,24);
+  const c=await company(db,id),b=await body(req),name=text(b.name,80),address=text(b.address,200),phone=text(b.phone,24),tagline=text(b.tagline??c.tagline,160);
   if(name.length<2||!Number.isInteger(b.open_hour)||!Number.isInteger(b.close_hour)||b.open_hour<0||b.close_hour>24||b.open_hour>=b.close_hour)fail(400,'Проверьте название и часы работы');
-  await db.prepare('UPDATE companies SET name=?,address=?,phone=?,open_hour=?,close_hour=? WHERE id=?').bind(name,address,phone,b.open_hour,b.close_hour,c.id).run();return json({ok:true});
+  await db.prepare('UPDATE companies SET name=?,address=?,phone=?,open_hour=?,close_hour=?,tagline=? WHERE id=?').bind(name,address,phone,b.open_hour,b.close_hour,tagline,c.id).run();return json({ok:true});
  }
  const serviceMatch=path.match(/^\/api\/services\/([a-z0-9-]+)$/);
  if(serviceMatch&&req.method==='PATCH'){
