@@ -18,7 +18,7 @@ test('bot setup is owner-only and webhook authenticates Telegram requests',async
   assert.equal((await webhook('forged')).status,403);
   const start=await (await webhook(secret,'/start c_nail')).json();
   assert.equal(start.method,'sendMessage');assert.equal(start.chat_id,123);
-  assert.equal(start.reply_markup.inline_keyboard[0][0].web_app.url,'https://example.com/');
+  assert.equal(start.reply_markup.inline_keyboard[0][0].web_app.url,'https://example.com/?company=nail');
   assert.match((await (await webhook(secret,'/id')).json()).text,/123/);
   assert.deepEqual(await (await webhook(secret,'/start','group')).json(),{ok:true});
   assert.deepEqual(await (await webhook(secret,'hello')).json(),{ok:true});
