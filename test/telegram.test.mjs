@@ -1,8 +1,10 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../src/worker.js';
+import {database} from '../scripts/db.mjs';
+import {readFileSync} from 'node:fs';
 test('bot setup is owner-only and webhook authenticates Telegram requests',async()=>{
- const env={DB:{},DEV_MODE:'true',SUPERADMIN_IDS:'9001',BOT_TOKEN:'fake-test-token',APP_URL:'https://example.com'};
+ const DB=database();DB.sqlite.exec(readFileSync(new URL('../migrations/0001_initial.sql',import.meta.url),'utf8'));const env={DB,DEV_MODE:'true',SUPERADMIN_IDS:'9001',BOT_TOKEN:'fake-test-token',APP_URL:'https://example.com'};
  const setup=role=>worker.fetch(new Request('http://localhost/api/telegram/setup',{method:'POST',headers:{'x-demo-role':role}}),env);
  const original=globalThis.fetch,calls=[];
  globalThis.fetch=async(url,options)=>{const method=url.split('/').pop(),payload=JSON.parse(options.body);calls.push({method,payload});return Response.json({ok:true,result:method==='getWebhookInfo'?{url:'https://example.com/api/telegram/webhook'}:true})};
