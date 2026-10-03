@@ -1,3 +1,4 @@
+import {deliverMessages} from './delivery.js';
 import {localDate,localMinute,fromLocal,dateShift,publicOptions,shortBase,escHtml,messagePayload,when} from './v3.js';
 import {ensureSchema,enrichCompany,enrichService,services,v2} from './v2.js';
 import {identify} from './auth.js';
@@ -50,7 +51,7 @@ async function webhook(req,env){
  const expected=await webhookSecret(env),given=req.headers.get('X-Telegram-Bot-Api-Secret-Token')||'';
  let diff=expected.length^given.length;for(let i=0;i<expected.length;i++)diff|=expected.charCodeAt(i)^(given.charCodeAt(i)||0);
  if(diff)fail(403,'Forbidden');
- const update=await body(req),m=update.message;
+ const update=await body(req),m=update.message;await ensureSchema(env.DB);if(Number.isSafeInteger(update.update_id)){const inserted=await env.DB.prepare('INSERT OR IGNORE INTO telegram_updates VALUES(?,?)').bind(update.update_id,now()).run();if(!inserted.meta.changes)return json({ok:true})}
  if(m?.chat?.type!=='private'||!Number.isSafeInteger(m.chat.id)||m.chat.id<=0)return json({ok:true});
  const command=typeof m.text==='string'?m.text.trim().split(/\s+/)[0].split('@')[0]:'';
  if(!['/start','/help','/id'].includes(command))return json({ok:true});
@@ -66,7 +67,7 @@ async function webhook(req,env){
 export async function api(req,env){
  const url=new URL(req.url),path=url.pathname,db=env.DB;
  if(path==='/api/telegram/webhook')return webhook(req,env);
- if(path==='/api/health')return json({ok:true,version:'3.0.0'});
+ if(path==='/api/health')return json({ok:true,version:'4.0.0'});
  if(!db)fail(503,'База ещё не подключена');
  if(path!=='/api/telegram/setup')await ensureSchema(db);
  if(path==='/api/v2/resolve'){const handle=url.searchParams.get('username')||'';const row=await db.prepare('SELECT company_id FROM specialist_handles WHERE handle=?').bind(handle).first();if(!row)fail(404,'Страница не найдена. Проверьте ссылку специалиста');return json({company_id:row.company_id})}
@@ -121,14 +122,16 @@ export async function api(req,env){
   if(info.url!==new URL('/api/telegram/webhook',appUrl).href)fail(502,'Не удалось проверить подключение. Повторите попытку.');
   return json({ok:true});
  }
+ if(path==='/api/v4/contact'&&req.method==='GET'){const id=url.searchParams.get('company');await company(db,id);return json(await db.prepare('SELECT name,phone FROM bookings WHERE company_id=? AND user_id=? ORDER BY created_at DESC,rowid DESC LIMIT 1').bind(id,user.id).first()||{})}
+ if(path==='/api/v4/delivery'&&req.method==='GET'){const id=url.searchParams.get('company');if(!await access(db,env,user,id))fail(403,'Нет доступа');const rows=(await db.prepare("SELECT COALESCE(d.state,'unknown') state,COUNT(*) n FROM outbox o LEFT JOIN delivery_state d ON o.id=d.id WHERE o.chat_id=? AND COALESCE(d.updated_at,o.created_at)>? AND (d.state IS NOT NULL OR (o.attempts=5 AND o.sent_at IS NULL)) AND CASE WHEN json_valid(o.text) THEN json_extract(o.text,'$.takt.company') END=? GROUP BY COALESCE(d.state,'unknown')").bind(user.id,now()-86400,id).all()).results;return json(Object.fromEntries(rows.map(x=>[x.state,x.n])))}
  if(path==='/api/me'){
   const memberships=await db.prepare('SELECT company_id FROM memberships WHERE user_id=?').bind(user.id).all();
   return json({...user,owner:owners(env).includes(user.id),companies:memberships.results.map(m=>m.company_id)});
  }
- if((path==='/api/slots'||path==='/api/next-slot')&&req.method==='GET'){
+ if((path==='/api/slots'||path==='/api/next-slot'||path==='/api/availability')&&req.method==='GET'){
   const c=await company(db,url.searchParams.get('company'));
   const moving=url.searchParams.get('booking');let s,exclude='';if(moving){const b=await db.prepare('SELECT * FROM bookings WHERE id=? AND company_id=?').bind(moving,c.id).first();if(!b||b.user_id!==user.id&&!await access(db,env,user,c.id))fail(403,'Нет доступа');s={duration:(b.ends_at-b.starts_at)/60};exclude=b.id}else{s=await enrichService(db,await db.prepare('SELECT * FROM services WHERE id=? AND company_id=? AND active=1').bind(url.searchParams.get('service'),c.id).first());if(!s)fail(404,'Услуга не найдена')}
-  const date=url.searchParams.get('date');if(path==='/api/next-slot'){dayBounds(date);const limit=dateShift(localDate(now(),c.timezone),c.horizon),start=fromLocal(date,0,c.timezone),end=fromLocal(dateShift(limit,1),0,c.timezone),buffer=c.buffer*60;const busy=(await db.prepare("SELECT starts_at,ends_at,0 blocked FROM bookings WHERE company_id=? AND id<>? AND status IN ('pending','confirmed') AND starts_at<? AND ends_at>? UNION ALL SELECT starts_at,ends_at,1 blocked FROM blocked_slots WHERE company_id=? AND starts_at<? AND ends_at>?").bind(c.id,exclude,end+buffer,start-buffer,c.id,end,start).all()).results;for(let d=dateShift(date,1);d<=limit;d=dateShift(d,1)){const found=possibleSlots(c,s,d,busy);if(found.length)return json({date:d,starts_at:found[0]})}return json({date:null})}return json(await availableSlots(db,c,s,date,exclude));
+  const date=url.searchParams.get('date');if(path==='/api/availability'){dayBounds(date);const days=Math.min(42,Math.max(1,Number(url.searchParams.get('days'))||14)),start=fromLocal(date,0,c.timezone),end=fromLocal(dateShift(date,days),0,c.timezone),buffer=c.buffer*60;if(date<dateShift(localDate(now(),c.timezone),-31)||date>dateShift(localDate(now(),c.timezone),181))fail(400,'Выберите дату в периоде записи');const busy=(await db.prepare("SELECT starts_at,ends_at,0 blocked FROM bookings WHERE company_id=? AND id<>? AND status IN ('pending','confirmed') AND starts_at<? AND ends_at>? UNION ALL SELECT starts_at,ends_at,1 blocked FROM blocked_slots WHERE company_id=? AND starts_at<? AND ends_at>?").bind(c.id,exclude,end+buffer,start-buffer,c.id,end,start).all()).results;return json(Array.from({length:days},(_,i)=>{const d=dateShift(date,i),slots=possibleSlots(c,s,d,busy);return {date:d,count:slots.length,first:slots[0]||null}}))}if(path==='/api/next-slot'){dayBounds(date);const limit=dateShift(localDate(now(),c.timezone),c.horizon),start=fromLocal(date,0,c.timezone),end=fromLocal(dateShift(limit,1),0,c.timezone),buffer=c.buffer*60;const busy=(await db.prepare("SELECT starts_at,ends_at,0 blocked FROM bookings WHERE company_id=? AND id<>? AND status IN ('pending','confirmed') AND starts_at<? AND ends_at>? UNION ALL SELECT starts_at,ends_at,1 blocked FROM blocked_slots WHERE company_id=? AND starts_at<? AND ends_at>?").bind(c.id,exclude,end+buffer,start-buffer,c.id,end,start).all()).results;for(let d=dateShift(date,1);d<=limit;d=dateShift(d,1)){const found=possibleSlots(c,s,d,busy);if(found.length)return json({date:d,starts_at:found[0]})}return json({date:null})}return json(await availableSlots(db,c,s,date,exclude));
  }
  if(path==='/api/bookings'&&req.method==='GET'){
   const scope=url.searchParams.get('scope'),c=url.searchParams.get('company');
@@ -138,9 +141,9 @@ export async function api(req,env){
   return json((await db.prepare(`SELECT b.*,c.name AS company_name FROM bookings b JOIN companies c ON c.id=b.company_id WHERE ${where} ORDER BY b.starts_at DESC LIMIT 500`).bind(value).all()).results);
  }
  if(path==='/api/bookings'&&req.method==='POST'){
-  const b=await body(req),c=await company(db,b.company_id);if(b.manual&&!await access(db,env,user,c.id))fail(403,'Нет доступа');const bookingUser=b.manual?'manual-'+c.id+'-'+text(b.phone,24).replace(/\D/g,''):user.id;
-  if(!/^[a-zA-Z0-9-]{8,80}$/.test(b.request_key||''))fail(400,'Повторите оформление');
-  const old=await db.prepare('SELECT * FROM bookings WHERE user_id=? AND request_key=?').bind(bookingUser,b.request_key).first();if(old)return json(old);
+  const b=await body(req),c=await company(db,b.company_id);if(b.manual&&!await access(db,env,user,c.id))fail(403,'Нет доступа');let bookingUser=b.manual?'manual-'+c.id+'-'+text(b.phone,24).replace(/\D/g,''):user.id;
+  if(b.manual&&b.client_id){if(!await db.prepare('SELECT 1 FROM bookings WHERE company_id=? AND user_id=? LIMIT 1').bind(c.id,b.client_id).first())fail(403,'Нет доступа к клиенту');bookingUser=b.client_id}if(!/^[a-zA-Z0-9-]{8,80}$/.test(b.request_key||''))fail(400,'Повторите оформление');
+  const old=await db.prepare('SELECT * FROM bookings WHERE user_id=? AND request_key=? AND company_id=?').bind(bookingUser,b.request_key,c.id).first();if(old)return json(old);
   const s=await enrichService(db,await db.prepare('SELECT * FROM services WHERE id=? AND company_id=? AND active=1').bind(b.service_id,c.id).first());if(!s)fail(400,'Услуга недоступна');
   const name=text(b.name,80),phone=text(b.phone,24),details=text(b.details,1200),start=Number(b.starts_at);
   if(name.length<2||!/^[+\d\s()-]{10,24}$/.test(phone)||phone.replace(/\D/g,'').length<10)fail(400,'Проверьте имя и телефон');
@@ -148,11 +151,11 @@ export async function api(req,env){
   const date=localDate(start,c.timezone);
   if(!(await availableSlots(db,c,s,date)).includes(start))fail(409,'Время вне расписания или уже занято');
   if(['cleaning','auto'].includes(c.category)&&details.length<5)fail(400,c.category==='cleaning'?'Укажите адрес и площадь':'Укажите автомобиль и задачу');
-  const count=await db.prepare("SELECT COUNT(*) AS n FROM bookings WHERE user_id=? AND starts_at>? AND status IN ('pending','confirmed')").bind(user.id,now()).first();if(count.n>=10)fail(429,'У вас уже 10 активных записей');
+  const count=await db.prepare("SELECT COUNT(*) AS n FROM bookings WHERE user_id=? AND starts_at>? AND status IN ('pending','confirmed')").bind(user.id,now()).first();if(!b.manual&&count.n>=10)fail(429,'У вас уже 10 активных записей');
   if(b.manual&&!await access(db,env,user,c.id))fail(403,'Нет доступа');
   const booking={id:crypto.randomUUID(),company_id:c.id,service_id:s.id,user_id:bookingUser,name,phone,details,starts_at:start,ends_at:start+s.duration*60,price:s.price,service_name:s.name,status:'pending',created_at:now(),request_key:b.request_key};
   try{await db.batch([db.prepare('INSERT INTO bookings(id,company_id,service_id,user_id,name,phone,details,starts_at,ends_at,price,service_name,status,created_at,request_key) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(...Object.values(booking)),...await notices(db,booking,'created'),...(!b.manual?[db.prepare('INSERT INTO client_links(user_id,company_id,created_at,last_seen) VALUES(?,?,?,?) ON CONFLICT(user_id,company_id) DO UPDATE SET last_seen=excluded.last_seen').bind(user.id,c.id,now(),Date.now())]:[])]);}
-  catch(e){if(String(e).includes('SLOT_TAKEN'))fail(409,'Это время уже заняли. Выберите другое.');if(String(e).includes('UNIQUE')){const retry=await db.prepare('SELECT * FROM bookings WHERE user_id=? AND request_key=?').bind(bookingUser,b.request_key).first();if(retry)return json(retry)}throw e}
+  catch(e){if(String(e).includes('SLOT_TAKEN'))fail(409,'Это время только что заняли. Выберите другое.');if(String(e).includes('UNIQUE')){const retry=await db.prepare('SELECT * FROM bookings WHERE user_id=? AND request_key=? AND company_id=?').bind(bookingUser,b.request_key,c.id).first();if(retry)return json(retry);fail(409,'Повторите оформление записи')}throw e}
   return json(booking,201);
  }
  const bookingMatch=path.match(/^\/api\/bookings\/([a-z0-9-]+)$/);
@@ -164,7 +167,7 @@ export async function api(req,env){
   if(status==='done'&&b.ends_at>now())fail(400,'Завершить можно после окончания записи');
   // Atomic compare-and-set: only one operator can transition the same status.
   const eventId=crypto.randomUUID();
-  const results=await db.batch([db.prepare('UPDATE bookings SET status=?,status_event=? WHERE id=? AND status=?').bind(status,eventId,b.id,b.status),...await notices(db,b,status,[b.id,eventId]),...(status==='cancelled'?[db.prepare('DELETE FROM outbox WHERE id LIKE ? AND sent_at IS NULL').bind(b.id+':reminder%')]:[])]);
+  const results=await db.batch([db.prepare('UPDATE bookings SET status=?,status_event=? WHERE id=? AND status=?').bind(status,eventId,b.id,b.status),...await notices(db,b,status,[b.id,eventId]),...(status==='cancelled'?[db.prepare('DELETE FROM outbox WHERE id LIKE ? AND sent_at IS NULL AND attempts<5').bind(b.id+':reminder%')]:[])]);
   if(!results[0].meta.changes)fail(409,'Статус уже изменился');return json({ok:true});
  }
  const companyMatch=path.match(/^\/api\/companies\/([a-z0-9-]+)$/);
@@ -188,20 +191,7 @@ export async function api(req,env){
  }
  fail(404,'Не найдено');
 }
-export async function deliver(env){
- if(!env.BOT_TOKEN||!env.DB)return;await ensureSchema(env.DB);
- const reminders=await env.DB.prepare("SELECT * FROM bookings WHERE status IN ('pending','confirmed') AND starts_at>? AND starts_at<=? AND user_id NOT LIKE 'manual-%'").bind(now(),now()+86400).all();
- for(const b of reminders.results){const c=await company(env.DB,b.company_id);if(!c.notifications.reminders)continue;await queue(env.DB,`${b.id}:reminder:${b.starts_at}`,b.user_id,JSON.stringify(messagePayload(b,c,'reminder'))).run()}
- const all=(await env.DB.prepare("SELECT c.* FROM companies c JOIN specialist_options o ON o.company_id=c.id WHERE c.active=1 AND json_extract(o.data,'$.notifications.summary')=1").all()).results;
- for(const raw of all){const c=await enrichCompany(env.DB,raw),minute=localMinute(now(),c.timezone);if(minute<480||minute>=540)continue;const d=localDate(now(),c.timezone),start=fromLocal(d,0,c.timezone),end=fromLocal(dateShift(d,1),0,c.timezone);const stats=await env.DB.prepare("SELECT COUNT(*) n,COALESCE(SUM(price),0) amount FROM bookings WHERE company_id=? AND status IN ('pending','confirmed','done') AND starts_at>=? AND starts_at<?").bind(c.id,start,end).first();const members=(await env.DB.prepare('SELECT user_id FROM memberships WHERE company_id=?').bind(c.id).all()).results;for(const m of members)await queue(env.DB,`summary:${c.id}:${d}:${m.user_id}`,m.user_id,JSON.stringify({text:`☀️ <b>Ваш день в Takt</b>\n\n📅 ${d}\nЗаписей: <b>${stats.n}</b>\nСтоимость услуг: <b>${stats.amount} ₽</b>`,parse_mode:'HTML',reply_markup:{inline_keyboard:[[{text:'Открыть расписание',web_app:{url:(env.APP_URL||'https://takt.teymurstudent.workers.dev')+'/?view=calendar'}}]]}})).run()}
- const rows=await env.DB.prepare('SELECT * FROM outbox WHERE sent_at IS NULL AND attempts<5 AND lease_until<? ORDER BY created_at LIMIT 30').bind(now()).all();
- for(const row of rows.results){const claimed=await env.DB.prepare('UPDATE outbox SET lease_until=?,attempts=attempts+1 WHERE id=? AND sent_at IS NULL AND lease_until<? RETURNING id').bind(now()+300,row.id,now()).first();if(!claimed)continue;
- let payload={text:row.text};try{const parsed=JSON.parse(row.text);if(parsed.text)payload=parsed}catch{}
- if(payload.takt){const meta=payload.takt;delete payload.takt;const b=await env.DB.prepare('SELECT * FROM bookings WHERE id=?').bind(meta.booking).first();const stale=!b||(['created','confirmed','moved','reminder'].includes(meta.event)&&(b.starts_at!==meta.start||b.status==='cancelled'))||meta.event==='reminder'&&(!['pending','confirmed'].includes(b.status)||b.starts_at<=now());if(stale){await env.DB.prepare('UPDATE outbox SET sent_at=? WHERE id=?').bind(now(),row.id).run();continue}const c=await company(env.DB,b.company_id);if(meta.event==='reminder'&&!c.notifications.reminders||meta.admin&&c.notifications[meta.event]===false){await env.DB.prepare('UPDATE outbox SET sent_at=? WHERE id=?').bind(now(),row.id).run();continue}
- const base=env.APP_URL||'https://takt.teymurstudent.workers.dev',make=(action='')=>{const u=new URL(base);if(!meta.admin)u.searchParams.set('company',b.company_id);u.searchParams.set('booking',b.id);if(action)u.searchParams.set('action',action);return u.href};payload.reply_markup={inline_keyboard:[[{text:meta.admin?'Открыть запись':'Моя запись',web_app:{url:make()}}]]};if(meta.event==='reminder'&&b.starts_at>now()+c.cancel_hours*3600){payload.reply_markup.inline_keyboard.push([...(c.allow_reschedule?[{text:'Перенести',web_app:{url:make('move')}}]:[]),{text:'Отменить',web_app:{url:make('cancel')}}])}}
- try{const res=await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:row.chat_id,...payload}),signal:AbortSignal.timeout(10000)});const data=await res.json();if(data.ok)await env.DB.prepare('UPDATE outbox SET sent_at=? WHERE id=?').bind(now(),row.id).run();else if(data.error_code===403)await env.DB.prepare('UPDATE outbox SET attempts=5 WHERE id=?').bind(row.id).run()}catch{/* Leased outbox retries; never log credentials or personal data. */}
- }
-}
+export async function deliver(env){return deliverMessages(env,{ensureSchema,company,enrichCompany,queue})}
 export default {
  async fetch(req,env,ctx){try{if(new URL(req.url).pathname.startsWith('/api/')){const result=await api(req,env);if(result.ok&&['POST','PATCH'].includes(req.method)&&/\/api\/(bookings|v2\/reschedule)/.test(new URL(req.url).pathname))ctx?.waitUntil(deliver(env));return result;}const url=new URL(req.url);if(/^\/[a-z][a-z0-9-]{2,31}$/.test(url.pathname)){await ensureSchema(env.DB);const handle=url.pathname.slice(1),row=await env.DB.prepare('SELECT company_id FROM specialist_handles WHERE handle=?').bind(handle).first();if(row){url.pathname='/';url.searchParams.set('username',handle);return Response.redirect(url.href,302)}}return env.ASSETS.fetch(req)}catch(e){if(e instanceof HttpError||Number.isInteger(e.status))return json({error:e.message},e.status);console.error('Request failed',e.name);return json({error:'Не удалось выполнить запрос. Попробуйте ещё раз.'},500)}},
  async scheduled(_event,env,ctx){ctx.waitUntil(deliver(env))}

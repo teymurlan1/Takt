@@ -15,13 +15,15 @@ test('bot setup is owner-only and webhook authenticates Telegram requests',async
   assert.ok(calls[3].payload.description.length<=512);assert.ok(calls[4].payload.short_description.length<=120);
   const secret=calls[0].payload.secret_token;
   assert.match(secret,/^[a-f0-9]{64}$/);assert.notEqual(secret,env.BOT_TOKEN);
-  const webhook=(token,command='/start',type='private')=>worker.fetch(new Request('https://example.com/api/telegram/webhook',{method:'POST',headers:{'X-Telegram-Bot-Api-Secret-Token':token},body:JSON.stringify({message:{chat:{id:123,type},text:command}})}),env);
+  const webhook=(token,command='/start',type='private',update_id)=>worker.fetch(new Request('https://example.com/api/telegram/webhook',{method:'POST',headers:{'X-Telegram-Bot-Api-Secret-Token':token},body:JSON.stringify({update_id,message:{chat:{id:123,type},text:command}})}),env);
   assert.equal((await webhook('')).status,403);
   assert.equal((await webhook('forged')).status,403);
   const start=await (await webhook(secret,'/start c_nail')).json();
   assert.equal(start.method,'sendMessage');assert.equal(start.chat_id,123);
   assert.equal(start.reply_markup.inline_keyboard[0][0].web_app.url,'https://example.com/?company=nail');
   assert.match((await (await webhook(secret,'/id')).json()).text,/123/);
+  assert.equal((await (await webhook(secret,'/start','private',777)).json()).method,'sendMessage');
+  assert.deepEqual(await (await webhook(secret,'/start','private',777)).json(),{ok:true});
   assert.deepEqual(await (await webhook(secret,'/start','group')).json(),{ok:true});
   assert.deepEqual(await (await webhook(secret,'hello')).json(),{ok:true});
   globalThis.fetch=async()=>Response.json({ok:false,description:'fake secret details'});

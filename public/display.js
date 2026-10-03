@@ -31,7 +31,7 @@ async function toggle(automatic=false){
 export function initDisplay(app,toast){
  tg=app;notify=toast;
  tg?.ready();tg?.expand();
- try{tg?.setHeaderColor('#ffffff');tg?.setBackgroundColor('#f7f8f4')}catch{}
+ try{tg?.setHeaderColor('#ffffff');tg?.setBackgroundColor('#f6f7fb')}catch{}
  for(const event of ['safeAreaChanged','contentSafeAreaChanged','fullscreenChanged','viewportChanged'])tg?.onEvent?.(event,sync);
  tg?.onEvent?.('fullscreenFailed',event=>{if(event?.error==='UNSUPPORTED')unsupported=true;sync();if(manual)notify('Telegram не поддерживает полный экран на этом устройстве.');manual=false;});
  document.addEventListener('fullscreenchange',sync);
