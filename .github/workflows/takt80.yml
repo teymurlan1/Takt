@@ -24,6 +24,8 @@ jobs:
         run: python3 scripts/takt80_frontend.py
       - name: Finalize compatibility
         run: python3 scripts/takt80_finalize.py
+      - name: Align direct-link regression
+        run: python3 scripts/takt80_testfix.py
       - name: Run tests
         run: npm test
       - name: Syntax check
