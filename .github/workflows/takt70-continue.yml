@@ -32,6 +32,8 @@ jobs:
                   lines.append('app=app.replace("[\'services\',\'settings\',\'share\',\'analytics\',\'subscription\',\'profile\'].includes(S.page)","[\'services\',\'settings\',\'share\',\'analytics\',\'reviews\',\'subscription\',\'profile\'].includes(S.page)")')
               elif "'go back reviews'" in line:
                   lines.append('# navigation list already updated globally above')
+              elif "'client reviews'" in line:
+                  lines.append('app=replace_once(app,"${location}<div class=\\"section-heading client-services-heading\\"><h2>Выберите услугу</h2>","${location}${clientReviews(x)}<div class=\\"section-heading client-services-heading\\"><h2>Выберите услугу</h2>",\'client reviews\')')
               else:
                   lines.append(line)
           p.write_text('\n'.join(lines)+'\n')
