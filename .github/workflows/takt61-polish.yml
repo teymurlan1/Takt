@@ -20,8 +20,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Apply Takt 6.1 patch
-        run: python3 scripts/takt61-polish.py
+      - name: Apply Takt 6.1 app patch
+        run: python3 scripts/takt61-app.py
+      - name: Apply Takt 6.1 server patch
+        run: python3 scripts/takt61-server.py
       - name: Run tests
         run: npm test
       - name: Syntax check
