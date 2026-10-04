@@ -17,3 +17,5 @@ CREATE TABLE IF NOT EXISTS telegram_review_messages(
   updated_at INTEGER NOT NULL,
   PRIMARY KEY(booking_id,chat_id)
 );
+-- Previous default was 30 days. Takt 8.0 moves specialists still on that default to 90 days; they can change it later.
+UPDATE specialist_options SET data=json_set(data,'$.horizon',90) WHERE COALESCE(json_extract(data,'$.horizon'),30)=30;
