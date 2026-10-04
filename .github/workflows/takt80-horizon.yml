@@ -1,0 +1,34 @@
+name: Takt 8.0 horizon migration
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/takt80-horizon.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  migrate-test-commit:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13'
+      - name: Apply horizon migration
+        run: python3 scripts/takt80_horizon.py
+      - name: Run tests
+        run: npm test
+      - name: Syntax check
+        run: npm run check
+      - name: Commit migration
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/v2.js migrations/0009_takt_v80.sql
+          git diff --cached --quiet && exit 0
+          git commit -m 'Takt 8.0: default specialist booking horizon to three months'
+          git push
