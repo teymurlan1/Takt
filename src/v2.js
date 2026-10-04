@@ -1,7 +1,9 @@
 import {schema3,options,validateOptions,localDate,fromLocal,dateShift} from './v3.js';
+import {schema7} from './v7.js';
 // Additive schema: legacy bookings and service IDs are preserved.
 export const schema=[
 ...schema3,
+...schema7,
 `CREATE TABLE IF NOT EXISTS specialist_settings(company_id TEXT PRIMARY KEY REFERENCES companies(id),category TEXT NOT NULL DEFAULT 'beauty',photo TEXT NOT NULL DEFAULT '',schedule TEXT NOT NULL,cancel_hours INTEGER NOT NULL DEFAULT 0)`,
 `CREATE TABLE IF NOT EXISTS service_details(service_id TEXT PRIMARY KEY REFERENCES services(id),company_id TEXT NOT NULL REFERENCES companies(id),description TEXT NOT NULL DEFAULT '',photo TEXT NOT NULL DEFAULT '',duration INTEGER NOT NULL CHECK(duration>=15 AND duration<=480 AND duration%5=0),position INTEGER NOT NULL DEFAULT 0)`,
 `CREATE TABLE IF NOT EXISTS client_links(user_id TEXT NOT NULL,company_id TEXT NOT NULL REFERENCES companies(id),created_at INTEGER NOT NULL,last_seen INTEGER NOT NULL,PRIMARY KEY(user_id,company_id))`,
@@ -18,7 +20,7 @@ export const schema=[
 `CREATE INDEX IF NOT EXISTS subscriptions_status ON subscriptions(status,trial_ends_at,paid_until)`
 ];
 const initialized=new WeakMap();
-export async function ensureSchema(db){if(!initialized.has(db))initialized.set(db,(async()=>{await db.prepare('CREATE TABLE IF NOT EXISTS schema_versions(version INTEGER PRIMARY KEY)').run();if(await db.prepare('SELECT 1 FROM schema_versions WHERE version=6').first())return;await db.batch([...schema.map(sql=>db.prepare(sql)),db.prepare('INSERT OR IGNORE INTO schema_versions VALUES(6)')])})().catch(e=>{initialized.delete(db);throw e}));await initialized.get(db)}
+export async function ensureSchema(db){if(!initialized.has(db))initialized.set(db,(async()=>{await db.prepare('CREATE TABLE IF NOT EXISTS schema_versions(version INTEGER PRIMARY KEY)').run();if(await db.prepare('SELECT 1 FROM schema_versions WHERE version=7').first())return;await db.batch([...schema.map(sql=>db.prepare(sql)),db.prepare('INSERT OR IGNORE INTO schema_versions VALUES(7)')])})().catch(e=>{initialized.delete(db);throw e}));await initialized.get(db)}
 const err=(status,message)=>{throw Object.assign(new Error(message),{status})};
 const clean=(s,n=200)=>typeof s==='string'?s.trim().slice(0,n):'';
 const stamp=()=>Math.floor(Date.now()/1000);
