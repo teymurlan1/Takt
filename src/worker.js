@@ -3,6 +3,7 @@ import {deliverMessages} from './delivery.js';
 import {localDate,localMinute,fromLocal,dateShift,publicOptions,shortBase,escHtml,messagePayload,when} from './v3.js';
 import {ensureSchema,enrichCompany,enrichService,services,v2} from './v2.js';
 import {identify} from './auth.js';
+import {subscription,setAttendance} from './v6.js';
 const now=()=>Math.floor(Date.now()/1000);
 const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
 class HttpError extends Error { constructor(status,message){super(message);this.status=status;} }
@@ -35,6 +36,17 @@ async function notices(db,b,event,guard=null,previous=null){
  return [...(/^[0-9]+$/.test(b.user_id)&&c.notifications.client_events!==false?[queue(db,`${b.id}:${event}:client`,b.user_id,JSON.stringify(messagePayload(b,c,kind,false,previous)),guard)]:[]),...(c.notifications[kind]!==false?members.results.filter(m=>m.user_id!==b.user_id).map(m=>queue(db,`${b.id}:${event}:${m.user_id}`,m.user_id,JSON.stringify(messagePayload(b,c,kind,true,previous)),guard)):[])];
 }
 
+async function attendanceNotices(db,b,state){
+ const c=await company(db,b.company_id),members=await db.prepare('SELECT user_id FROM memberships WHERE company_id=?').bind(b.company_id).all(),event=state==='coming'?'attendance_yes':'attendance_no';
+ return members.results.filter(m=>m.user_id!==b.user_id).map(m=>queue(db,`${b.id}:attendance:${state}:${b.starts_at}:${m.user_id}`,m.user_id,JSON.stringify(messagePayload({...b,attendance_state:state},c,event,true))));
+}
+async function respondAttendance(db,userId,bookingId,state){
+ const b=await db.prepare('SELECT * FROM bookings WHERE id=?').bind(bookingId).first();if(!b)fail(404,'Запись не найдена');if(String(b.user_id)!==String(userId))fail(403,'Нет доступа');if(!['pending','confirmed'].includes(b.status))fail(409,'Запись уже изменена');const c=await company(db,b.company_id);
+ if(state==='coming'){await setAttendance(db,b.id,'coming');const q=await attendanceNotices(db,b,'coming');if(q.length)await db.batch(q);return {ok:true,attendance_state:'coming',booking_status:b.status,late:false}}
+ if(state!=='not_coming')fail(400,'Неизвестный ответ');const late=b.starts_at<=now()+c.cancel_hours*3600;
+ if(!late){const eventId=crypto.randomUUID(),changed=await db.prepare("UPDATE bookings SET status='cancelled',status_event=? WHERE id=? AND status=?").bind(eventId,b.id,b.status).run();if(!changed.meta.changes)fail(409,'Запись уже изменена');await setAttendance(db,b.id,'not_coming');await db.batch([...await notices(db,b,'cancelled',[b.id,eventId]),db.prepare('DELETE FROM outbox WHERE id LIKE ? AND sent_at IS NULL').bind(b.id+':%reminder%'),db.prepare('DELETE FROM outbox WHERE id LIKE ? AND sent_at IS NULL').bind(b.id+':%2h:%')]);return {ok:true,attendance_state:'not_coming',booking_status:'cancelled',late:false}}
+ await setAttendance(db,b.id,'not_coming');const q=await attendanceNotices(db,b,'not_coming');if(q.length)await db.batch(q);return {ok:true,attendance_state:'not_coming',booking_status:b.status,late:true};
+}
 async function webhookSecret(env){
  if(!env.BOT_TOKEN)fail(503,'Токен бота не настроен');
  const enc=new TextEncoder();
@@ -52,7 +64,8 @@ async function webhook(req,env){
  const expected=await webhookSecret(env),given=req.headers.get('X-Telegram-Bot-Api-Secret-Token')||'';
  let diff=expected.length^given.length;for(let i=0;i<expected.length;i++)diff|=expected.charCodeAt(i)^(given.charCodeAt(i)||0);
  if(diff)fail(403,'Forbidden');
- const update=await body(req),m=update.message;await ensureSchema(env.DB);if(Number.isSafeInteger(update.update_id)){const inserted=await env.DB.prepare('INSERT OR IGNORE INTO telegram_updates VALUES(?,?)').bind(update.update_id,now()).run();if(!inserted.meta.changes)return json({ok:true})}
+ const update=await body(req),m=update.message,cb=update.callback_query;await ensureSchema(env.DB);if(Number.isSafeInteger(update.update_id)){const inserted=await env.DB.prepare('INSERT OR IGNORE INTO telegram_updates VALUES(?,?)').bind(update.update_id,now()).run();if(!inserted.meta.changes)return json({ok:true})}
+ if(cb?.id&&Number.isSafeInteger(cb.from?.id)&&typeof cb.data==='string'){const hit=cb.data.match(/^visit:([a-z0-9-]+):(yes|no)$/);if(hit){try{const result=await respondAttendance(env.DB,String(cb.from.id),hit[1],hit[2]==='yes'?'coming':'not_coming');await telegram(env,'answerCallbackQuery',{callback_query_id:cb.id,text:result.attendance_state==='coming'?'Спасибо, визит подтверждён ✅':result.late?'Специалист уведомлён':'Запись отменена'});}catch(e){await telegram(env,'answerCallbackQuery',{callback_query_id:cb.id,text:e.message||'Не удалось сохранить ответ',show_alert:true}).catch(()=>{});}return json({ok:true})}}
  if(m?.chat?.type!=='private'||!Number.isSafeInteger(m.chat.id)||m.chat.id<=0)return json({ok:true});
  await resumeBlocked(env.DB,m.chat.id);await contact(env.DB,m.chat.id,'allowed');
  const command=typeof m.text==='string'?m.text.trim().split(/\s+/)[0].split('@')[0]:'';
@@ -69,7 +82,7 @@ async function webhook(req,env){
 export async function api(req,env){
  const url=new URL(req.url),path=url.pathname,db=env.DB;
  if(path==='/api/telegram/webhook')return webhook(req,env);
- if(path==='/api/health')return json({ok:true,version:'5.0.0'});
+ if(path==='/api/health')return json({ok:true,version:'6.0.0'});
  if(!db)fail(503,'База ещё не подключена');
  if(path!=='/api/telegram/setup')await ensureSchema(db);
  if(path==='/api/v2/resolve'){const handle=url.searchParams.get('username')||'';const row=await db.prepare('SELECT company_id FROM specialist_handles WHERE handle=?').bind(handle).first();if(!row)fail(404,'Страница не найдена. Проверьте ссылку специалиста');return json({company_id:row.company_id})}
@@ -82,11 +95,13 @@ export async function api(req,env){
  if(path==='/api/v5/admin'&&req.method==='GET'){if(!owners(env).includes(user.id))fail(403,'Нет доступа');return json({...await overview(db),bot_configured:!!env.BOT_TOKEN})}
  if(path==='/api/v5/notifications'&&req.method==='POST'){await resumeBlocked(db,user.id);return json({ok:true})}
  if(path==='/api/v5/notifications'&&req.method==='GET'){return json({state:(await db.prepare('SELECT state FROM telegram_contacts WHERE user_id=?').bind(user.id).first())?.state||'unknown',allows_write:user.allows_write===true})}
+ if(path==='/api/v6/attendance'&&req.method==='POST'){const b=await body(req),result=await respondAttendance(db,user.id,text(b.booking_id,80),b.state);return json(result)}
+ if(path==='/api/v6/subscription'&&req.method==='GET'){const id=url.searchParams.get('company');if(!await access(db,env,user,id))fail(403,'Нет доступа');return json({...await subscription(db,id),payment_url:env.SUBSCRIPTION_PAYMENT_URL||''})}
  if(path.startsWith('/api/v2/')){const response=await v2(req,env,user,{json,body,access,company,slots:availableSlots,notices,dayBounds});if(response)return response}
- const privateCompany=path.match(/^\/api\/companies\/([a-z0-9-]+)$/);if(privateCompany&&req.method==='GET'){if(!await access(db,env,user,privateCompany[1]))fail(403,'Нет доступа');return json({...await company(db,privateCompany[1]),services:await services(db,privateCompany[1],true),short_base:shortBase(env)})}
+ const privateCompany=path.match(/^\/api\/companies\/([a-z0-9-]+)$/);if(privateCompany&&req.method==='GET'){if(!await access(db,env,user,privateCompany[1]))fail(403,'Нет доступа');return json({...await company(db,privateCompany[1]),services:await services(db,privateCompany[1],true),short_base:shortBase(env),subscription:{...await subscription(db,privateCompany[1]),payment_url:env.SUBSCRIPTION_PAYMENT_URL||''}})}
  if(path==='/api/companies'&&req.method==='GET'){
   const cs=await db.prepare('SELECT c.* FROM companies c JOIN memberships m ON m.company_id=c.id WHERE m.user_id=? AND c.active=1 ORDER BY c.rowid').bind(user.id).all();
-  const result=[];for(const c of cs.results)result.push({...await enrichCompany(db,c),services:await services(db,c.id,true),short_base:shortBase(env)});
+  const result=[];for(const c of cs.results)result.push({...await enrichCompany(db,c),services:await services(db,c.id,true),short_base:shortBase(env),subscription:{...await subscription(db,c.id),payment_url:env.SUBSCRIPTION_PAYMENT_URL||''}});
   return json(result);
  }
  if(path==='/api/register'&&req.method==='POST'){
@@ -119,7 +134,7 @@ export async function api(req,env){
   const appUrl=new URL(env.APP_URL||url.origin);
   if(appUrl.protocol!=='https:')fail(400,'Подключение доступно на опубликованном HTTPS сайте');
   const secret=await webhookSecret(env);
-  await telegram(env,'setWebhook',{url:new URL('/api/telegram/webhook',appUrl).href,secret_token:secret,allowed_updates:['message']});
+  await telegram(env,'setWebhook',{url:new URL('/api/telegram/webhook',appUrl).href,secret_token:secret,allowed_updates:['message','callback_query']});
   await telegram(env,'setChatMenuButton',{menu_button:{type:'web_app',text:'Открыть Takt',web_app:{url:appUrl.href}}});
   await telegram(env,'setMyCommands',{commands:[{command:'start',description:'Открыть Такт'},{command:'help',description:'Как пользоваться'},{command:'id',description:'Мой Telegram ID'}]});
   await telegram(env,'setMyDescription',{description:"Такт — ваше дело в вашем ритме.\n\nДля мастеров и компаний\nСоздайте кабинет, добавьте услуги и часы работы. Отправьте клиентам свою ссылку на запись. Управляйте заявками в журнале.\n\nДля клиентов\nОткройте ссылку мастера, выберите услугу и время. Ваши записи и история — в приложении, подтверждения и напоминания — в Telegram.\n\nНажмите «Открыть Takt», чтобы начать."});
@@ -145,7 +160,7 @@ export async function api(req,env){
   let where='b.user_id=?',value=user.id;
   if(scope==='company'){if(!await access(db,env,user,c))fail(403,'Нет доступа');where='b.company_id=?';value=c}
   if(scope==='owner')fail(403,'Используйте свой кабинет');
-  return json((await db.prepare(`SELECT b.*,c.name AS company_name FROM bookings b JOIN companies c ON c.id=b.company_id WHERE ${where} ORDER BY b.starts_at DESC LIMIT 500`).bind(value).all()).results);
+  return json((await db.prepare(`SELECT b.*,c.name AS company_name,COALESCE(a.state,'unknown') AS attendance_state,a.responded_at AS attendance_responded_at FROM bookings b JOIN companies c ON c.id=b.company_id LEFT JOIN booking_attendance a ON a.booking_id=b.id WHERE ${where} ORDER BY b.starts_at DESC LIMIT 500`).bind(value).all()).results);
  }
  if(path==='/api/bookings'&&req.method==='POST'){
   const b=await body(req),c=await company(db,b.company_id);if(b.manual&&!await access(db,env,user,c.id))fail(403,'Нет доступа');let bookingUser=b.manual?'manual-'+c.id+'-'+text(b.phone,24).replace(/\D/g,''):user.id;
