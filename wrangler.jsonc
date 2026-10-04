@@ -6,5 +6,5 @@
   "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": true },
   "d1_databases": [{ "binding": "DB", "database_name": "takt_db", "database_id": "434bc2ba-97db-4423-97c6-adf81ab6e61a", "migrations_dir": "migrations" }],
   "vars": { "BOT_USERNAME": "takt_service_bot", "APP_URL": "" },
-  "triggers": { "crons": ["*/5 * * * *"] }
+  "triggers": { "crons": ["* * * * *"] }
 }

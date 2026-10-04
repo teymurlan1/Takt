@@ -28,7 +28,7 @@ test('manual booking preserves a known client identity and rejects unknown tenan
 });
 test('master one-hour reminder is optional, unique and invalidated by cancellation',async()=>{
  const t=await setup({notifications:{master_reminder:true}}),at=Math.ceil((Date.now()/1000+1200)/900)*900;const b=await t.book(at);assert.equal(b.status,201);
- const original=fetch,calls=[];globalThis.fetch=async(u,o)=>{calls.push(JSON.parse(o.body));return Response.json({ok:true})};
+ t.DB.sqlite.prepare('UPDATE bookings SET created_at=? WHERE id=?').run(at-86401,b.data.id);const original=fetch,calls=[];globalThis.fetch=async(u,o)=>{calls.push(JSON.parse(o.body));return Response.json({ok:true})};
  try{await deliver(t.env);await deliver(t.env);const reminders=calls.filter(x=>x.text.includes('Скоро следующий клиент'));assert.equal(reminders.length,1);assert.equal(reminders[0].chat_id,'9002');assert.equal(calls.filter(x=>x.text.includes('Напоминаем')).length,1);await t.req('/bookings/'+b.data.id,'PATCH',{status:'cancelled'},'client');await deliver(t.env);assert.equal(calls.filter(x=>x.text.includes('Скоро следующий клиент')).length,1)}finally{globalThis.fetch=original}
 });
 test('ambiguous Telegram timeout is not resent, explicit rate limit is retried',async()=>{

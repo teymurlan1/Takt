@@ -14,7 +14,7 @@ export const schema=[
 `CREATE TRIGGER IF NOT EXISTS blocked_insert_guard BEFORE INSERT ON blocked_slots WHEN EXISTS(SELECT 1 FROM bookings WHERE company_id=NEW.company_id AND status IN ('pending','confirmed') AND starts_at<NEW.ends_at AND ends_at>NEW.starts_at) OR EXISTS(SELECT 1 FROM blocked_slots WHERE company_id=NEW.company_id AND starts_at<NEW.ends_at AND ends_at>NEW.starts_at) BEGIN SELECT RAISE(ABORT,'SLOT_TAKEN'); END`
 ];
 const initialized=new WeakMap();
-export async function ensureSchema(db){if(!initialized.has(db))initialized.set(db,db.batch(schema.map(sql=>db.prepare(sql))).catch(e=>{initialized.delete(db);throw e}));await initialized.get(db)}
+export async function ensureSchema(db){if(!initialized.has(db))initialized.set(db,(async()=>{await db.prepare('CREATE TABLE IF NOT EXISTS schema_versions(version INTEGER PRIMARY KEY)').run();if(await db.prepare('SELECT 1 FROM schema_versions WHERE version=5').first())return;await db.batch([...schema.map(sql=>db.prepare(sql)),db.prepare('INSERT OR IGNORE INTO schema_versions VALUES(5)')])})().catch(e=>{initialized.delete(db);throw e}));await initialized.get(db)}
 const err=(status,message)=>{throw Object.assign(new Error(message),{status})};
 const clean=(s,n=200)=>typeof s==='string'?s.trim().slice(0,n):'';
 const stamp=()=>Math.floor(Date.now()/1000);
@@ -47,6 +47,7 @@ if(p==='/api/v2/register'&&m==='POST'){
  await db.batch([
  db.prepare('INSERT OR IGNORE INTO companies(id,name,category,tagline,address,phone) VALUES(?,?,?,?,?,?)').bind(id,name,['cleaning','auto'].includes(b.category)?b.category:'beauty',clean(b.tagline,160)||'Запись в удобное для вас время',clean(b.address),clean(b.phone,24)),
  db.prepare('INSERT OR IGNORE INTO memberships VALUES(?,?)').bind(id,user.id),
+ db.prepare('INSERT OR IGNORE INTO registrations VALUES(?,?)').bind(id,stamp()),
  db.prepare('INSERT OR IGNORE INTO specialist_settings(company_id,category,photo,schedule) VALUES(?,?,?,?)').bind(id,b.category,img,JSON.stringify(hours)),
  db.prepare('INSERT OR IGNORE INTO services(id,company_id,name,price,duration) VALUES(?,?,?,?,?)').bind(sid,id,sn,b.price,Math.ceil(b.duration/30)*30),
  db.prepare('INSERT OR IGNORE INTO service_details(service_id,company_id,description,photo,duration) VALUES(?,?,?,?,?)').bind(sid,id,clean(b.description,700),sp,b.duration)
