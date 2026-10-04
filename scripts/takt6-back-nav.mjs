@@ -35,15 +35,15 @@ replaceBlock(
   'async function startBooking',
   `function manualNewClientEditor(){openSheet('Новый клиент',\`<form id="manual-client-form"><label>Имя<input name="name" value="\${esc(manualNewClient.name)}" required minlength="2" maxlength="80" autocomplete="name"></label><label>Телефон<input name="phone" type="tel" value="\${esc(manualNewClient.phone)}" required minlength="10" maxlength="24" autocomplete="tel"></label><div class="form-error" role="alert"></div><div class="actions"><button type="button" class="secondary" id="manual-back-clients">Назад</button><button class="primary">Выбрать услугу</button></div></form>\`)}
 function manualServices(){openSheet('Выберите услугу',\`<p class="note">Клиент: \${esc(manualClient.name)}</p><div class="manual-services">\${S.own.services.filter(s=>s.active).map(s=>\`<button class="more-card" data-manual-service="\${s.id}"><div><h3>\${esc(s.name)}</h3><p>\${s.duration} мин · \${money(s.price)}</p></div>\${icon('arrow')}</button>\`).join('')}</div><div class="actions"><button class="secondary" id="manual-back-clients">Назад</button></div>\`)}
-async function startBooking`,
+`,
   'manual service picker navigation'
 );
 
 replaceBlock(
   'async function startBooking(id,manual=false,move=null){',
   'function bookingCalendar',
-  `async function startBooking(id,manual=false,move=null){if(!S.me){openSheet('Вход через Telegram',login());return}const tenant=manual?S.own:S.tenant,s=tenant?.services.find(x=>x.id===id)||move&&{id:move.service_id,name:move.service_name,duration:(move.ends_at-move.starts_at)/60,price:move.price};if(!tenant||!s)return;const previous=manual&&booking?.manual&&!booking.move?booking:null;booking={tenant,s,manual,move,key:crypto.randomUUID(),step:0,date:manual?(previous?.date||manualDate):day(),at:manual?(previous?.at||null):null,name:manual?manualClient?.name||previous?.name||'':S.me.name,phone:manual?manualClient?.phone||previous?.phone||'':'',details:manual&&previous?.client_id===manualClient?.id?previous.details||'':'',client_id:manual?manualClient?.id:undefined,known:manual&&!!manualClient,month:manual?(previous?.month||(previous?.date||manualDate).slice(0,7)):day().slice(0,7),availability:{}};if(!manual&&!move){try{const contact=await api('/v4/contact?company='+tenant.id);if(contact.phone){booking.name=contact.name;booking.phone=contact.phone;booking.known=true}}catch{}}await bookingSheet()}
-function bookingCalendar`,
+  `async function startBooking(id,manual=false,move=null){if(!S.me){openSheet('Вход через Telegram',login());return}const tenant=manual?S.own:S.tenant,s=tenant?.services.find(x=>x.id===id)||move&&{id:move.service_id,name:move.service_name,duration:(move.ends_at-move.starts_at)/60,price:move.price};if(!tenant||!s)return;const previous=manual&&booking?.manual&&!booking.move?booking:null,sameClient=previous&&((previous.client_id&&previous.client_id===manualClient?.id)||(!previous.client_id&&previous.phone===manualClient?.phone));booking={tenant,s,manual,move,key:crypto.randomUUID(),step:0,date:manual?(previous?.date||manualDate):day(),at:manual?(previous?.at||null):null,name:manual?manualClient?.name||previous?.name||'':S.me.name,phone:manual?manualClient?.phone||previous?.phone||'':'',details:manual&&sameClient?previous.details||'':'',client_id:manual?manualClient?.id:undefined,known:manual&&!!manualClient,month:manual?(previous?.month||(previous?.date||manualDate).slice(0,7)):day().slice(0,7),availability:{}};if(!manual&&!move){try{const contact=await api('/v4/contact?company='+tenant.id);if(contact.phone){booking.name=contact.name;booking.phone=contact.phone;booking.known=true}}catch{}}await bookingSheet()}
+`,
   'manual booking state preservation'
 );
 
@@ -57,7 +57,7 @@ replaceBlock(
   'async function loadSlots(){',
   'async function submitBooking',
   `async function loadSlots(){const n=++slotRequest,b=booking,selectedAt=b.at;try{const slots=await api('/slots?company='+b.tenant.id+'&service='+b.s.id+'&date='+b.date+(b.move?'&booking='+b.move.id:''));if(n!==slotRequest||booking!==b||!sheet.open)return;const selectedValid=selectedAt&&slots.includes(selectedAt);b.at=selectedValid?selectedAt:null;sheet.querySelector('#available-slots').innerHTML=slots.length?slots.map(t=>\`<button class="slot \${selectedValid&&t===selectedAt?'active':''}" data-slot="\${t}">\${time(t)}</button>\`).join(''):'<div class="no-slots"><h3>На этот день свободного времени нет</h3><p>Ищем ближайший доступный день…</p></div>';const nextButton=sheet.querySelector('#booking-next');if(nextButton)nextButton.disabled=!selectedValid;if(!slots.length){const next=await api('/next-slot?company='+b.tenant.id+'&service='+b.s.id+'&date='+b.date+(b.move?'&booking='+b.move.id:''));if(n!==slotRequest||booking!==b||!sheet.open)return;sheet.querySelector('#available-slots').innerHTML=next.date?\`<div class="no-slots"><h3>На этот день свободного времени нет</h3><p>Ближайшее время: \${dateLabel(next.date)} · \${time(next.starts_at)}</p><button class="secondary" data-book-date="\${next.date}">Показать</button></div>\`:'<div class="no-slots"><h3>Все доступные даты заняты</h3><p>Свяжитесь со специалистом, чтобы подобрать время.</p></div>'}}catch(e){if(n===slotRequest&&sheet.open)sheet.querySelector('#available-slots').textContent=e.message}}
-async function submitBooking`,
+`,
   'preserve selected slot when going back'
 );
 
