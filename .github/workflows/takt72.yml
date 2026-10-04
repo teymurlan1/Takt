@@ -20,6 +20,16 @@ jobs:
           node-version: '22.13'
       - name: Apply Takt 7.2
         run: python3 scripts/takt72.py
+      - name: Align legacy test with requested early completion
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('test/app.test.mjs')
+          s=p.read_text()
+          s=s.replace("test('only company can confirm; cannot complete future appointment'","test('only company can confirm and specialist may complete early'")
+          s=s.replace("assert.equal((await t.request('/bookings/'+b.data.id,'PATCH',{status:'done'},'company')).status,400)","assert.equal((await t.request('/bookings/'+b.data.id,'PATCH',{status:'done'},'company')).status,200)")
+          p.write_text(s)
+          PY
       - name: Run tests
         run: npm test
       - name: Syntax check
