@@ -44,3 +44,5 @@ jobs:
           fi
           git commit -m "Continue Takt 6: preserve booking state on Back"
           git push
+
+# retry after patch-script syntax fix
