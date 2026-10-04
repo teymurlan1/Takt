@@ -1,0 +1,35 @@
+name: Apply Takt 6.1 polish
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/takt61-polish.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test-commit:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply Takt 6.1 patch
+        run: python3 scripts/takt61-polish.py
+      - name: Run tests
+        run: npm test
+      - name: Syntax check
+        run: npm run check
+      - name: Commit Takt 6.1
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/app-v2.js public/takt-v6.css public/index.html src/delivery.js src/worker.js package.json
+          git commit -m "Takt 6.1: polish dashboard, booking flow and visit confirmation"
+          git push
