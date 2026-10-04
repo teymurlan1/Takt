@@ -18,6 +18,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22.13'
+      - name: Prepare patch helper
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/takt70.py')
+          s=p.read_text()
+          s=s.replace('worker=replace_once(worker,"bot-webhook-v61","bot-webhook-v70",\'webhook task\')','worker=worker.replace("bot-webhook-v61","bot-webhook-v70")')
+          s=s.replace('worker=replace_once(worker,"bot-menu-v5","bot-menu-v70",\'menu task\')','worker=worker.replace("bot-menu-v5","bot-menu-v70")')
+          p.write_text(s)
+          PY
       - name: Apply Takt 7.0 continuation
         run: python3 scripts/takt70.py
       - name: Run tests
