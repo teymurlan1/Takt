@@ -1,0 +1,20 @@
+name: Takt 6 final check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/takt6-final-check.yml'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run all tests
+        run: npm test
+      - name: Syntax check
+        run: npm run check
