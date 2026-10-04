@@ -16,7 +16,7 @@ export async function validateTelegram(raw, token, now = Math.floor(Date.now()/1
  if(diff) throw new Error('AUTH');
  const user=JSON.parse(p.get('user')||'null');
  if(!Number.isSafeInteger(user?.id)||user.id<=0) throw new Error('AUTH');
- return {id:String(user.id),name:String(user.first_name||'Клиент'),allows_write:user.allows_write_to_pm===true};
+ return {id:String(user.id),name:String(user.first_name||'Клиент'),first_name:String(user.first_name||'').slice(0,80),last_name:String(user.last_name||'').slice(0,80),username:String(user.username||'').replace(/^@/,'').slice(0,32),allows_write:user.allows_write_to_pm===true};
 }
 export async function identify(request,env) {
  const hostname=new URL(request.url).hostname;
