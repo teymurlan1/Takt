@@ -10,7 +10,7 @@ export const schema7=[
 
 export async function reviewSummary(db,companyId,limit=3){
  const stats=await db.prepare('SELECT COUNT(*) count,COALESCE(ROUND(AVG(rating),1),0) average FROM reviews WHERE company_id=?').bind(companyId).first()||{count:0,average:0};
- const n=Math.max(0,Math.min(100,Number(limit)||3));
+ const n=Math.max(0,Math.min(50,Number(limit)||3));
  const rows=n?(await db.prepare('SELECT booking_id,client_name,service_name,rating,text,created_at FROM reviews WHERE company_id=? ORDER BY created_at DESC LIMIT ?').bind(companyId,n).all()).results:[];
  return {count:Number(stats.count)||0,average:Number(stats.average)||0,items:rows.map(x=>({...x,client_name:publicName(x.client_name)}))};
 }

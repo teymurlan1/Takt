@@ -6,7 +6,7 @@ import {identify} from './auth.js';
 import {subscription,setAttendance} from './v6.js';
 import {reviewSummary,createReview} from './v7.js';
 const now=()=>Math.floor(Date.now()/1000);
-const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+const securityHeaders={'X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin','X-Robots-Tag':'noindex, nofollow'};const json=(data,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store',...securityHeaders}});const secure=response=>{const headers=new Headers(response.headers);for(const [k,v] of Object.entries(securityHeaders))headers.set(k,v);return new Response(response.body,{status:response.status,statusText:response.statusText,headers})};
 class HttpError extends Error { constructor(status,message){super(message);this.status=status;} }
 const fail=(s,m)=>{throw new HttpError(s,m)};
 const text=(v,max=200)=>typeof v==='string'?v.trim().slice(0,max):'';
@@ -87,7 +87,7 @@ async function webhook(req,env){
 export async function api(req,env){
  const url=new URL(req.url),path=url.pathname,db=env.DB;
  if(path==='/api/telegram/webhook')return webhook(req,env);
- if(path==='/api/health')return json({ok:true,version:'7.0.0'});
+ if(path==='/api/health')return json({ok:true,version:'7.1.0'});
  if(!db)fail(503,'База ещё не подключена');
  if(path!=='/api/telegram/setup')await ensureSchema(db);
  if(path==='/api/v2/resolve'){const handle=url.searchParams.get('username')||'';const row=await db.prepare('SELECT company_id FROM specialist_handles WHERE handle=?').bind(handle).first();if(!row)fail(404,'Страница не найдена. Проверьте ссылку специалиста');return json({company_id:row.company_id})}
@@ -96,7 +96,7 @@ export async function api(req,env){
   const c=await company(db,publicCompany[1]);
   return json({...publicOptions(c),services:await services(db,c.id),reviews:await reviewSummary(db,c.id,3)});
  }
- if(path==='/api/v7/reviews'&&req.method==='GET'){const id=url.searchParams.get('company');await company(db,id);return json(await reviewSummary(db,id,url.searchParams.get('limit')||100))}
+ if(path==='/api/v7/reviews'&&req.method==='GET'){const id=text(url.searchParams.get('company'),80);if(!/^[a-z0-9-]{1,80}$/.test(id))fail(400,'Некорректный кабинет');await company(db,id);return json(await reviewSummary(db,id,url.searchParams.get('limit')||50))}
  let user;try{user=await identify(req,env)}catch{fail(401,'Откройте приложение через Telegram. Если оно уже открыто — закройте и откройте снова.')}
  if(path==='/api/v5/admin'&&req.method==='GET'){if(!owners(env).includes(user.id))fail(403,'Нет доступа');return json({...await overview(db),bot_configured:!!env.BOT_TOKEN})}
  if(path==='/api/v5/notifications'&&req.method==='POST'){await resumeBlocked(db,user.id);return json({ok:true})}
@@ -223,6 +223,6 @@ export async function api(req,env){
 }
 export async function deliver(env){return deliverMessages(env,{ensureSchema,company,enrichCompany,queue})}
 export default {
- async fetch(req,env,ctx){try{if(new URL(req.url).pathname.startsWith('/api/')){const result=await api(req,env);if(result.ok&&['POST','PATCH'].includes(req.method)&&/\/api\/(bookings|v2\/reschedule)/.test(new URL(req.url).pathname))ctx?.waitUntil(deliver(env));return result;}const url=new URL(req.url);if(/^\/[a-z][a-z0-9-]{2,31}$/.test(url.pathname)){await ensureSchema(env.DB);const handle=url.pathname.slice(1),row=await env.DB.prepare('SELECT company_id FROM specialist_handles WHERE handle=?').bind(handle).first();if(row){url.pathname='/';url.searchParams.set('username',handle);return Response.redirect(url.href,302)}}return env.ASSETS.fetch(req)}catch(e){if(e instanceof HttpError||Number.isInteger(e.status))return json({error:e.message},e.status);console.error('Request failed',e.name);if(env.DB)await recordError(env.DB,'api','REQUEST_FAILED');return json({error:'Не удалось выполнить запрос. Попробуйте ещё раз.'},500)}},
+ async fetch(req,env,ctx){try{if(new URL(req.url).pathname.startsWith('/api/')){const result=await api(req,env);if(result.ok&&['POST','PATCH'].includes(req.method)&&/\/api\/(bookings|v2\/reschedule)/.test(new URL(req.url).pathname))ctx?.waitUntil(deliver(env));return result;}const url=new URL(req.url);if(/^\/[a-z][a-z0-9-]{2,31}$/.test(url.pathname)){await ensureSchema(env.DB);const handle=url.pathname.slice(1),row=await env.DB.prepare('SELECT company_id FROM specialist_handles WHERE handle=?').bind(handle).first();if(row){url.pathname='/';url.searchParams.set('username',handle);return Response.redirect(url.href,302)}}return secure(await env.ASSETS.fetch(req))}catch(e){if(e instanceof HttpError||Number.isInteger(e.status))return json({error:e.message},e.status);console.error('Request failed',e.name);if(env.DB)await recordError(env.DB,'api','REQUEST_FAILED');return json({error:'Не удалось выполнить запрос. Попробуйте ещё раз.'},500)}},
  async scheduled(_event,env,ctx){await ensureSchema(env.DB);ctx.waitUntil((async()=>{if(env.BOT_TOKEN&&!await env.DB.prepare("SELECT 1 FROM task_runs WHERE name='bot-webhook-v70' AND state='ok'").first()){try{await trackedTask(env.DB,'bot-webhook-v70',async()=>{const secret=await webhookSecret(env),appUrl=new URL(env.APP_URL||'https://takt.teymurstudent.workers.dev');await telegram(env,'setWebhook',{url:new URL('/api/telegram/webhook',appUrl).href,secret_token:secret,allowed_updates:['message','callback_query']})})}catch{}}if(env.BOT_TOKEN&&!await env.DB.prepare("SELECT 1 FROM task_runs WHERE name='bot-menu-v70' AND state='ok'").first()){try{await trackedTask(env.DB,'bot-menu-v70',()=>telegram(env,'setChatMenuButton',{menu_button:{type:'web_app',text:'Открыть Takt',web_app:{url:env.APP_URL||'https://takt.teymurstudent.workers.dev'}}}))}catch{}}await trackedTask(env.DB,'notifications',()=>deliver(env))})())}
 };
