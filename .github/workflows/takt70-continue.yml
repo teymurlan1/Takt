@@ -41,6 +41,17 @@ jobs:
           PY
       - name: Apply Takt 7.0 continuation
         run: python3 scripts/takt70.py
+      - name: Align tests with Takt 7.0 message wording
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          for name in ['test/v3.test.mjs','test/v4.test.mjs','test/v5.test.mjs','test/v6.test.mjs']:
+              p=Path(name)
+              s=p.read_text()
+              s=s.replace("includes('Напоминаем')","includes('Подтвердите визит')")
+              s=s.replace("includes('Вы записаны')","includes('Запись создана')")
+              p.write_text(s)
+          PY
       - name: Run tests
         run: npm test
       - name: Syntax check
