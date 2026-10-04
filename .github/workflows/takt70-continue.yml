@@ -24,6 +24,7 @@ jobs:
           from pathlib import Path
           p=Path('scripts/takt70.py')
           s=p.read_text()
+          s=s.replace("out,n=re.subn(pattern,repl,s,count=1,flags=flags)","out,n=re.subn(pattern,lambda _m: repl,s,count=1,flags=flags)")
           s=s.replace('worker=replace_once(worker,"bot-webhook-v61","bot-webhook-v70",\'webhook task\')','worker=worker.replace("bot-webhook-v61","bot-webhook-v70")')
           s=s.replace('worker=replace_once(worker,"bot-menu-v5","bot-menu-v70",\'menu task\')','worker=worker.replace("bot-menu-v5","bot-menu-v70")')
           lines=[]
