@@ -26,7 +26,15 @@ jobs:
           s=p.read_text()
           s=s.replace('worker=replace_once(worker,"bot-webhook-v61","bot-webhook-v70",\'webhook task\')','worker=worker.replace("bot-webhook-v61","bot-webhook-v70")')
           s=s.replace('worker=replace_once(worker,"bot-menu-v5","bot-menu-v70",\'menu task\')','worker=worker.replace("bot-menu-v5","bot-menu-v70")')
-          p.write_text(s)
+          lines=[]
+          for line in s.splitlines():
+              if "'sidebar active reviews'" in line:
+                  lines.append('app=app.replace("[\'services\',\'settings\',\'share\',\'analytics\',\'subscription\',\'profile\'].includes(S.page)","[\'services\',\'settings\',\'share\',\'analytics\',\'reviews\',\'subscription\',\'profile\'].includes(S.page)")')
+              elif "'go back reviews'" in line:
+                  lines.append('# navigation list already updated globally above')
+              else:
+                  lines.append(line)
+          p.write_text('\n'.join(lines)+'\n')
           PY
       - name: Apply Takt 7.0 continuation
         run: python3 scripts/takt70.py
