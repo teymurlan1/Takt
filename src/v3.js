@@ -1,7 +1,7 @@
 import {schema5} from './v5.js';
 import {localDate,localMinute,fromLocal,dateShift,zoneLabel} from '../public/time.js';
 export {localDate,localMinute,fromLocal,dateShift,zoneLabel};
-export const defaults={timezone:'Europe/Moscow',profession:'',telegram:'',format:'salon',min_notice:30,horizon:30,buffer:0,allow_reschedule:true,summary_time:'20:00',venue_name:'',floor:'',room:'',entrance:'',directions:'',map_url:'',notifications:{client_events:true,client_2h:true,master_2h:true,daily_summary:true,created:true,cancelled:true,moved:true,reminders:true,summary:false,master_reminder:false}};
+export const defaults={timezone:'Europe/Moscow',profession:'',telegram:'',format:'salon',min_notice:30,horizon:90,buffer:0,allow_reschedule:true,summary_time:'20:00',venue_name:'',floor:'',room:'',entrance:'',directions:'',map_url:'',notifications:{client_events:true,client_2h:true,master_2h:true,daily_summary:true,created:true,cancelled:true,moved:true,reminders:true,summary:false,master_reminder:false}};
 export const schema3=[
 ...schema5,
 `CREATE TABLE IF NOT EXISTS delivery_state(id TEXT PRIMARY KEY REFERENCES outbox(id) ON DELETE CASCADE,state TEXT NOT NULL,updated_at INTEGER NOT NULL)`,
@@ -17,19 +17,27 @@ export function validateOptions(b,old){const x={...old,...b,notifications:{...ol
 export function publicOptions(c){const {notifications,summary_time,...rest}=c;return rest}
 export const shortBase=env=>(env.SHORT_LINK_BASE||env.APP_URL||'https://takt.teymurstudent.workers.dev').replace(/\/$/,'');
 export const escHtml=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-export function when(t,zone){return {date:new Date(t*1000).toLocaleDateString('ru-RU',{timeZone:zone,day:'numeric',month:'long'}),time:new Date(t*1000).toLocaleTimeString('ru-RU',{timeZone:zone,hour:'2-digit',minute:'2-digit'})}}
-export function messagePayload(b,c,event,admin=false,previous=null){
- const w=when(b.starts_at,c.timezone),money=new Intl.NumberFormat('ru-RU').format(b.price)+' ₽';
- const titles={created:admin?'Новая запись':'Запись создана',confirmed:'Запись подтверждена',cancelled:'Запись отменена',done:'Запись завершена',review_request:'Как всё прошло? ⭐',client_2h:'До записи 2 часа',master_2h:'Клиент через 2 часа',master_reminder:'Скоро следующий клиент',reminder:'Подтвердите визит',moved:'Запись перенесена',attendance_yes:'Клиент подтвердил визит',attendance_no:'Клиент не сможет прийти'};
- if(event==='review_request')return {text:`<b>Как всё прошло? ⭐</b>\n\nБудем рады вашему отзыву — он поможет специалисту становиться лучше, а другим клиентам сделать выбор.\n\n${escHtml(c.name)} · ${escHtml(b.service_name)}`,parse_mode:'HTML',takt:{booking:b.id,company:b.company_id,start:b.starts_at,event,admin:false}};
- let lines=[`<b>${titles[event]||titles.moved}</b>`];
- if(previous){const old=when(previous,c.timezone);lines.push('',`Было: ${old.date} · ${old.time}`,`Стало: ${w.date} · ${w.time}`)}else lines.push('',`📅 <b>${event==='reminder'&&localDate(b.starts_at,c.timezone)===dateShift(localDate(Date.now()/1000,c.timezone),1)?'Завтра, ':''}${w.date} · ${w.time}</b>`);
- lines.push(`${escHtml(b.service_name)} · ${money}`,admin?`Клиент: ${escHtml(b.name)}`:`Специалист: ${escHtml(c.name)}`);
- if(admin&&b.phone)lines.push(`Телефон: ${escHtml(b.phone)}`);else if(!admin&&c.address)lines.push(`📍 ${escHtml(c.address)}`);
- if(event==='created'&&!admin)lines.push('','Специалист подтвердит запись в Takt.');
- if(event==='created'&&admin)lines.push('','Подтвердите запись, когда будете готовы принять клиента.');
- if(event==='cancelled'&&admin)lines.push('','Время снова доступно для записи.');
- if(event==='reminder')lines.push('','Пожалуйста, подтвердите, что вы придёте.');
- if(event==='client_2h')lines.push('',b.attendance_state==='unknown'?'Подтвердите, пожалуйста, что вы придёте.':'До встречи.');
+const localeByLang={ru:'ru-RU',kk:'kk-KZ',az:'az-AZ',uz:'uz-UZ'};
+const telegramText={
+ ru:{created_admin:'🆕 Новая запись',created_client:'🟡 Запись создана',confirmed:'✅ Запись подтверждена',cancelled:'❌ Запись отменена',done:'🏁 Запись завершена',review_request:'Как всё прошло? ⭐',client_2h:'⏰ До записи 2 часа',master_2h:'👤 Клиент через 2 часа',master_reminder:'⏳ Скоро следующий клиент',reminder:'🔔 Подтвердите визит',moved:'🔄 Запись перенесена',attendance_yes:'✅ Клиент подтвердил визит',attendance_no:'❌ Клиент не сможет прийти',client:'Клиент',specialist:'Специалист',phone:'Телефон',created_client_note:'Специалист подтвердит запись в Takt.',created_admin_note:'Подтвердите запись, когда будете готовы принять клиента.',cancel_admin_note:'Время снова доступно для записи.',confirm_visit:'Пожалуйста, подтвердите, что вы придёте.',see_you:'До встречи.',was:'Было',became:'Стало',tomorrow:'Завтра, '},
+ kk:{created_admin:'🆕 Жаңа жазба',created_client:'🟡 Жазба жасалды',confirmed:'✅ Жазба расталды',cancelled:'❌ Жазба тоқтатылды',done:'🏁 Жазба аяқталды',review_request:'Қалай өтті? ⭐',client_2h:'⏰ Жазбаға 2 сағат қалды',master_2h:'👤 Клиент 2 сағаттан кейін',master_reminder:'⏳ Келесі клиент жақында',reminder:'🔔 Келуді растаңыз',moved:'🔄 Жазба ауыстырылды',attendance_yes:'✅ Клиент келетінін растады',attendance_no:'❌ Клиент келе алмайды',client:'Клиент',specialist:'Маман',phone:'Телефон',created_client_note:'Маман жазбаны Takt ішінде растайды.',created_admin_note:'Клиентті қабылдай алсаңыз, жазбаны растаңыз.',cancel_admin_note:'Уақыт қайтадан жазылуға қолжетімді.',confirm_visit:'Келетініңізді растаңыз.',see_you:'Кездескенше.',was:'Бұрын',became:'Енді',tomorrow:'Ертең, '},
+ az:{created_admin:'🆕 Yeni qeyd',created_client:'🟡 Qeyd yaradıldı',confirmed:'✅ Qeyd təsdiqləndi',cancelled:'❌ Qeyd ləğv edildi',done:'🏁 Qeyd tamamlandı',review_request:'Necə keçdi? ⭐',client_2h:'⏰ Qeydə 2 saat qalıb',master_2h:'👤 Müştəri 2 saatdan sonra',master_reminder:'⏳ Növbəti müştəri yaxındadır',reminder:'🔔 Gəlişi təsdiqləyin',moved:'🔄 Qeyd köçürüldü',attendance_yes:'✅ Müştəri gələcəyini təsdiqlədi',attendance_no:'❌ Müştəri gələ bilməyəcək',client:'Müştəri',specialist:'Mütəxəssis',phone:'Telefon',created_client_note:'Mütəxəssis qeydi Takt-da təsdiqləyəcək.',created_admin_note:'Müştərini qəbul edə bilirsinizsə, qeydi təsdiqləyin.',cancel_admin_note:'Vaxt yenidən qeyd üçün açıqdır.',confirm_visit:'Zəhmət olmasa gələcəyinizi təsdiqləyin.',see_you:'Görüşənədək.',was:'Əvvəl',became:'İndi',tomorrow:'Sabah, '},
+ uz:{created_admin:'🆕 Yangi yozuv',created_client:'🟡 Yozuv yaratildi',confirmed:'✅ Yozuv tasdiqlandi',cancelled:'❌ Yozuv bekor qilindi',done:'🏁 Yozuv yakunlandi',review_request:'Qanday o‘tdi? ⭐',client_2h:'⏰ Yozuvgacha 2 soat',master_2h:'👤 Mijoz 2 soatdan keyin',master_reminder:'⏳ Keyingi mijoz yaqin',reminder:'🔔 Tashrifni tasdiqlang',moved:'🔄 Yozuv ko‘chirildi',attendance_yes:'✅ Mijoz kelishini tasdiqladi',attendance_no:'❌ Mijoz kela olmaydi',client:'Mijoz',specialist:'Mutaxassis',phone:'Telefon',created_client_note:'Mutaxassis yozuvni Takt ichida tasdiqlaydi.',created_admin_note:'Mijozni qabul qila olsangiz, yozuvni tasdiqlang.',cancel_admin_note:'Vaqt yana yozilish uchun ochiq.',confirm_visit:'Kelishingizni tasdiqlang.',see_you:'Ko‘rishguncha.',was:'Oldin',became:'Endi',tomorrow:'Ertaga, '}
+};
+const tgLang=lang=>telegramText[lang]||telegramText.ru;
+export function when(t,zone,lang='ru'){const locale=localeByLang[lang]||localeByLang.ru;return {date:new Date(t*1000).toLocaleDateString(locale,{timeZone:zone,day:'numeric',month:'long'}),time:new Date(t*1000).toLocaleTimeString(locale,{timeZone:zone,hour:'2-digit',minute:'2-digit'})}}
+export function messagePayload(b,c,event,admin=false,previous=null,lang='ru'){
+ const L=tgLang(lang),w=when(b.starts_at,c.timezone,lang),money=new Intl.NumberFormat(localeByLang[lang]||'ru-RU').format(b.price)+' ₽';
+ const title=event==='created'?(admin?L.created_admin:L.created_client):(L[event]||L.moved);
+ if(event==='review_request')return {text:`<b>${L.review_request}</b>\n\n${lang==='ru'?'Будем рады вашему отзыву — он поможет специалисту становиться лучше, а другим клиентам сделать выбор.':lang==='kk'?'Пікіріңіз маманға жақсара түсуге, ал басқа клиенттерге таңдау жасауға көмектеседі.':lang==='az'?'Rəyiniz mütəxəssisə inkişaf etməyə, digər müştərilərə isə seçim etməyə kömək edəcək.':'Fikringiz mutaxassisga yaxshilanishga, boshqa mijozlarga esa tanlov qilishga yordam beradi.'}\n\n${escHtml(c.name)} · ${escHtml(b.service_name)}`,parse_mode:'HTML',takt:{booking:b.id,company:b.company_id,start:b.starts_at,event,admin:false}};
+ let lines=[`<b>${title}</b>`];
+ if(previous){const old=when(previous,c.timezone,lang);lines.push('',`${L.was}: ${old.date} · ${old.time}`,`${L.became}: ${w.date} · ${w.time}`)}else lines.push('',`📅 <b>${event==='reminder'&&localDate(b.starts_at,c.timezone)===dateShift(localDate(Date.now()/1000,c.timezone),1)?L.tomorrow:''}${w.date} · ${w.time}</b>`);
+ lines.push(`${escHtml(b.service_name)} · ${money}`,admin?`${L.client}: ${escHtml(b.name)}`:`${L.specialist}: ${escHtml(c.name)}`);
+ if(admin&&b.phone)lines.push(`${L.phone}: ${escHtml(b.phone)}`);else if(!admin&&c.address)lines.push(`📍 ${escHtml(c.address)}`);
+ if(event==='created'&&!admin)lines.push('',L.created_client_note);
+ if(event==='created'&&admin)lines.push('',L.created_admin_note);
+ if(event==='cancelled'&&admin)lines.push('',L.cancel_admin_note);
+ if(event==='reminder')lines.push('',L.confirm_visit);
+ if(event==='client_2h')lines.push('',b.attendance_state==='unknown'?L.confirm_visit:L.see_you);
  return {text:lines.join('\n'),parse_mode:'HTML',takt:{booking:b.id,company:b.company_id,start:b.starts_at,event,admin}};
 }

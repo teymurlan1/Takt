@@ -1,0 +1,23 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const app=fs.readFileSync(new URL('../public/app-v2.js',import.meta.url),'utf8');
+const worker=fs.readFileSync(new URL('../src/worker.js',import.meta.url),'utf8');
+const v3=fs.readFileSync(new URL('../src/v3.js',import.meta.url),'utf8');
+const v2=fs.readFileSync(new URL('../src/v2.js',import.meta.url),'utf8');
+const delivery=fs.readFileSync(new URL('../src/delivery.js',import.meta.url),'utf8');
+const i18n=fs.readFileSync(new URL('../public/i18n.js',import.meta.url),'utf8');
+const css=fs.readFileSync(new URL('../public/takt-v8.css',import.meta.url),'utf8');
+
+test('8.0 first run stores language role consent versions and theme',()=>{assert.match(v2,/user_app_settings/);assert.match(worker,/\/api\/v8\/profile/);assert.match(worker,/LEGAL_VERSIONS/);assert.match(app,/showOnboarding\('language'\)/);assert.match(app,/accept-consent/);assert.match(app,/data-onboard-role/)});
+test('8.0 supports Russian Kazakh Azerbaijani and Uzbek',()=>{for(const code of ["'ru'","'kk'","'az'","'uz'"])assert.match(i18n,new RegExp(code));assert.match(app,/languageControl/)});
+test('8.0 persists full dark theme',()=>{assert.match(css,/html\[data-theme="dark"\]/);assert.match(app,/themeControl/);assert.match(i18n,/applyTheme/)});
+test('8.0 specialist links go directly to Telegram and preserve exact specialist',()=>{assert.match(app,/https:\/\/t\.me\/takt_service_bot\?startapp=/);assert.match(worker,/startapp=u_/);assert.match(worker,/companyRow\?\{company:companyRow\.id\}/)});
+test('8.0 specialist can confirm or decline a new booking in Telegram',()=>{assert.match(delivery,/booking:\$\{b\.id\}:confirm/);assert.match(delivery,/booking:\$\{b\.id\}:decline/);assert.match(worker,/booking:\(\[a-z0-9-\]\+\):\(confirm\|decline\)/)});
+test('8.0 client booking status messages are visually distinct',()=>{assert.match(v3,/🟡 Запись создана/);assert.match(v3,/✅ Запись подтверждена/);assert.match(v3,/❌ Запись отменена/);assert.match(v3,/🏁 Запись завершена/)});
+test('8.0 review request is edited to thanks when possible',()=>{assert.match(v2,/telegram_review_messages/);assert.match(delivery,/telegram_review_messages/);assert.match(worker,/editMessageText/);assert.match(worker,/Спасибо за отзыв/)});
+test('8.0 default booking horizon is three months while settings remain configurable',()=>{assert.match(v3,/horizon:90/);assert.match(app,/3 месяца · стандарт/);assert.match(app,/180/)});
+test('8.0 month calendar carries chosen date into manual booking',()=>{assert.match(app,/data-manual-date/);assert.match(app,/manualDate=el\.dataset\.manualDate;S\.date=manualDate/);assert.match(app,/Дата: \$\{dateLabel\(targetDate\)\}/)});
+test('8.0 dashboard order is attention then quick actions then nearest bookings',()=>{const fn=app.slice(app.indexOf('function dashboard'),app.indexOf('function calendarDaySheet'));assert.ok(fn.indexOf('${attentionBlock}')<fn.indexOf('Быстрые действия'));assert.ok(fn.indexOf('Быстрые действия')<fn.indexOf('${nextBlock}'))});
+test('8.0 call and message actions use shared handlers',()=>{assert.match(app,/function callClient/);assert.match(app,/data-call=/);assert.match(app,/async function clientMessageEditor/)});
+test('8.0 help legal documents and subscription value are available',()=>{assert.match(app,/function helpPage/);assert.match(app,/function legalPage/);assert.match(app,/subscriptionStats/);assert.match(worker,/subscription-stats/)});

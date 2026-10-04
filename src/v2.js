@@ -22,10 +22,12 @@ export const schema=[
 `CREATE TABLE IF NOT EXISTS support_requests(id TEXT PRIMARY KEY,user_id TEXT NOT NULL,company_id TEXT,message TEXT NOT NULL,created_at INTEGER NOT NULL)`,
 `CREATE INDEX IF NOT EXISTS support_requests_user_time ON support_requests(user_id,created_at DESC)`,
 `CREATE TABLE IF NOT EXISTS client_messages(id TEXT PRIMARY KEY,company_id TEXT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,client_id TEXT NOT NULL,sender_id TEXT NOT NULL,message TEXT NOT NULL,created_at INTEGER NOT NULL)`,
-`CREATE INDEX IF NOT EXISTS client_messages_sender_time ON client_messages(company_id,sender_id,created_at DESC)`
+`CREATE INDEX IF NOT EXISTS client_messages_sender_time ON client_messages(company_id,sender_id,created_at DESC)`,
+`CREATE TABLE IF NOT EXISTS user_app_settings(user_id TEXT PRIMARY KEY,language TEXT NOT NULL DEFAULT '',role TEXT NOT NULL DEFAULT '',theme TEXT NOT NULL DEFAULT 'system',policy_version TEXT NOT NULL DEFAULT '',consent_version TEXT NOT NULL DEFAULT '',terms_version TEXT NOT NULL DEFAULT '',consent_at INTEGER,updated_at INTEGER NOT NULL DEFAULT 0)`,
+`CREATE TABLE IF NOT EXISTS telegram_review_messages(booking_id TEXT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,chat_id TEXT NOT NULL,message_id INTEGER NOT NULL,updated_at INTEGER NOT NULL,PRIMARY KEY(booking_id,chat_id))`
 ];
 const initialized=new WeakMap();
-export async function ensureSchema(db){if(!initialized.has(db))initialized.set(db,(async()=>{await db.prepare('CREATE TABLE IF NOT EXISTS schema_versions(version INTEGER PRIMARY KEY)').run();if(await db.prepare('SELECT 1 FROM schema_versions WHERE version=8').first())return;await db.batch([...schema.map(sql=>db.prepare(sql)),db.prepare('INSERT OR IGNORE INTO schema_versions VALUES(8)')])})().catch(e=>{initialized.delete(db);throw e}));await initialized.get(db)}
+export async function ensureSchema(db){if(!initialized.has(db))initialized.set(db,(async()=>{await db.prepare('CREATE TABLE IF NOT EXISTS schema_versions(version INTEGER PRIMARY KEY)').run();if(await db.prepare('SELECT 1 FROM schema_versions WHERE version=9').first())return;await db.batch([...schema.map(sql=>db.prepare(sql)),db.prepare('INSERT OR IGNORE INTO schema_versions VALUES(9)')])})().catch(e=>{initialized.delete(db);throw e}));await initialized.get(db)}
 const err=(status,message)=>{throw Object.assign(new Error(message),{status})};
 const clean=(s,n=200)=>typeof s==='string'?s.trim().slice(0,n):'';
 const stamp=()=>Math.floor(Date.now()/1000);
