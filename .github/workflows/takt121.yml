@@ -1,0 +1,67 @@
+name: Takt 12.1 final pilot release
+
+on:
+  push:
+    branches: [takt-12.1-work]
+    paths:
+      - '.github/workflows/takt121.yml'
+      - 'scripts/takt121-patch.py'
+      - 'scripts/takt121-fix.py'
+      - 'scripts/takt121-finalize.py'
+      - 'scripts/takt121-hotfix.py'
+      - 'scripts/takt121-guard.py'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: takt-12-1-final-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  patch-test-commit:
+    if: github.actor != 'github-actions[bot]'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: npm ci
+      - name: Apply Takt 12.1 patch
+        run: |
+          python scripts/takt121-patch.py
+          python scripts/takt121-fix.py
+          python scripts/takt121-finalize.py
+          python scripts/takt121-hotfix.py
+          python scripts/takt121-guard.py
+      - name: Syntax check
+        run: npm run check
+      - name: Unit and integration tests
+        run: npm test
+      - name: UI regression
+        run: npm run test:ui
+      - name: Commit Takt 12.1
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json public/index.html public/i18n.js public/admin-v10.js public/app-v2.js public/landing.js public/takt-v121.css src/v3.js src/v10.js src/v11.js src/bot-entry.js src/v2.js src/worker.js src/delivery.js test/v8.test.mjs test/v81.test.mjs test/v121.test.mjs scripts/ui-regression.mjs
+          if git diff --cached --quiet; then
+            echo "No generated changes to commit"
+            exit 0
+          fi
+          git commit -m "Takt 12.1: final pilot hardening, client affinity and calendar polish"
+          git pull --rebase origin takt-12.1-work || true
+          git push origin HEAD:takt-12.1-work
