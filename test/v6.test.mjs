@@ -39,9 +39,9 @@ test('early decline cancels and late decline only warns specialist',async()=>{
   const rows=(await t.req('/bookings?scope=company&company=nail')).data;const row=rows.find(x=>x.id===late.id);assert.equal(row.status,'pending');assert.equal(row.attendance_state,'not_coming');
 });
 
-test('24h reminder asks client to confirm attendance with Telegram buttons',async()=>{
+test('24h reminder is informational; attendance buttons only appear at 2h',async()=>{
   const t=setup();await configure(t,{cancel_hours:24});const start=alignedAfter(3*86400),b=await book(t,start),real=Date.now,original=globalThis.fetch,calls=[];
   globalThis.fetch=async(_u,o)=>{calls.push(JSON.parse(o.body));return Response.json({ok:true})};
-  try{Date.now=()=> (start-86400)*1000;await deliver(t.env);const msg=calls.find(x=>String(x.chat_id)==='9003'&&x.text.includes('Подтвердите визит'));assert.ok(msg);const flat=msg.reply_markup.inline_keyboard.flat();assert.ok(flat.some(x=>x.callback_data===`visit:${b.id}:yes:${b.starts_at}`));assert.ok(flat.some(x=>x.callback_data===`visit:${b.id}:no:${b.starts_at}`));assert.ok(flat.some(x=>x.text.includes('Перенести')))}finally{Date.now=real;globalThis.fetch=original}
+  try{Date.now=()=> (start-86400)*1000;await deliver(t.env);const msg=calls.find(x=>String(x.chat_id)==='9003'&&x.text.includes('Напоминаем о записи'));assert.ok(msg);const flat=msg.reply_markup.inline_keyboard.flat();assert.ok(!flat.some(x=>x.callback_data?.startsWith('visit:')));Date.now=()=> (start-7200)*1000;await deliver(t.env);await deliver(t.env);const question=calls.find(x=>String(x.chat_id)==='9003'&&x.text.includes('2 часа'));assert.ok(question.reply_markup.inline_keyboard.flat().some(x=>x.callback_data===`visit:${b.id}:yes:${b.starts_at}`));assert.ok(flat.some(x=>x.web_app?.url.includes('booking=')))}finally{Date.now=real;globalThis.fetch=original}
 });
 

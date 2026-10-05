@@ -1,17 +1,19 @@
 {
   "name": "takt-mini-app",
-  "version": "10.0.0",
+  "version": "11.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "test": "node --test",
-    "check": "node --check public/app-v2.js && node --check public/i18n.js && node --check public/mobile.js && node --check src/worker.js && node --check src/v2.js && node --check src/v3.js && node --check src/delivery.js && node --check src/v5.js && node --check src/v6.js && node --check src/v7.js && node --check src/v10.js && node --check src/bot-entry.js && node --check public/admin-v10.js",
+    "check": "node --check public/app-v2.js && node --check public/i18n.js && node --check public/mobile.js && node --check src/worker.js && node --check src/v2.js && node --check src/v3.js && node --check src/delivery.js && node --check src/v5.js && node --check src/v6.js && node --check src/v7.js && node --check src/v10.js && node --check src/bot-entry.js && node --check public/admin-v10.js && node --check src/v11.js && node --check src/control-auth.js && node --check public/control-center.js",
     "deploy": "wrangler deploy",
     "db:local": "wrangler d1 migrations apply takt_db --local",
-    "db:remote": "wrangler d1 migrations apply takt_db --remote"
+    "db:remote": "wrangler d1 migrations apply takt_db --remote",
+    "test:ui": "node scripts/ui-regression.mjs"
   },
   "devDependencies": {
+    "happy-dom": "^20.14.5",
     "wrangler": "^4.0.0"
   },
   "engines": {

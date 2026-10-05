@@ -29,7 +29,7 @@ test('manual booking preserves a known client identity and rejects unknown tenan
 test('master one-hour reminder is optional, unique and invalidated by cancellation',async()=>{
  const t=await setup({notifications:{master_reminder:true}}),at=Math.ceil((Date.now()/1000+1200)/900)*900;const b=await t.book(at);assert.equal(b.status,201);
  t.DB.sqlite.prepare('UPDATE bookings SET created_at=? WHERE id=?').run(at-86401,b.data.id);const original=fetch,calls=[];globalThis.fetch=async(u,o)=>{calls.push(JSON.parse(o.body));return Response.json({ok:true})};
- try{await deliver(t.env);await deliver(t.env);const reminders=calls.filter(x=>x.text.includes('Скоро следующий клиент'));assert.equal(reminders.length,1);assert.equal(reminders[0].chat_id,'9002');assert.equal(calls.filter(x=>x.text.includes('Подтвердите визит')).length,1);await t.req('/bookings/'+b.data.id,'PATCH',{status:'cancelled'},'client');await deliver(t.env);assert.equal(calls.filter(x=>x.text.includes('Скоро следующий клиент')).length,1)}finally{globalThis.fetch=original}
+ try{await deliver(t.env);await deliver(t.env);const reminders=calls.filter(x=>x.text.includes('Скоро следующий клиент'));assert.equal(reminders.length,1);assert.equal(reminders[0].chat_id,'9002');assert.equal(calls.filter(x=>x.text.includes('Напоминаем о записи')).length,1);await t.req('/bookings/'+b.data.id,'PATCH',{status:'cancelled'},'client');await deliver(t.env);assert.equal(calls.filter(x=>x.text.includes('Скоро следующий клиент')).length,1)}finally{globalThis.fetch=original}
 });
 test('ambiguous Telegram timeout is not resent, explicit rate limit is retried',async()=>{
  const t=await setup(),original=fetch;let calls=0;
@@ -49,3 +49,4 @@ test('manual retry keys cannot expose a client booking from another specialist',
  const key=crypto.randomUUID(),other=await t.req('/bookings','POST',{company_id:'auto',service_id:'auto-1',starts_at:at,name:'Александр',phone:'+79991234567',details:'Автомобиль, диагностика',request_key:key},'client');assert.equal(other.status,201);
  const retry=await t.book(at+10800,{manual:true,client_id:'9003',request_key:key},'company');assert.equal(retry.status,409);assert.equal(retry.data.id,undefined);assert.equal(retry.data.company_id,undefined);
 });
+
