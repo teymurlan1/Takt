@@ -1,6 +1,6 @@
-import {adminControls,initAdmin} from './admin-v10.js?v=110';
+import {adminControls,initAdmin} from './admin-v10.js?v=120';
 import {esc} from './icons.js';
-import {localizeDOM,translateText} from './i18n.js?v=110';
+import {localizeDOM,translateText} from './i18n.js?v=120';
 const states={pending:'Ожидает',confirmed:'Подтверждена',done:'Завершена',cancelled:'Отменена',no_show:'Не пришёл',sent:'Доставлено',retry:'Временная ошибка',blocked:'Бот заблокирован',failed:'Ошибка доставки',unknown:'Доставка не подтверждена',sending:'Отправляется',queued:'В очереди',skipped:'Отменено до отправки'};
 const date=t=>t?new Date(t*1000).toLocaleString('ru-RU'):'—';
 const pick=(name,values)=>`<select name="${name}">${values.map(([v,t])=>`<option value="${v}">${esc(t)}</option>`).join('')}</select>`;

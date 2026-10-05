@@ -1,4 +1,4 @@
-import {localizeDOM,translateText} from './i18n.js?v=110';
+import {localizeDOM,translateText} from './i18n.js?v=120';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const langs=[['ru','🇷🇺 Русский'],['kk','🇰🇿 Қазақша'],['az','🇦🇿 Azərbaycan dili'],['uz','🇺🇿 O‘zbekcha']];
 const sections=[['users','Пользователи'],['specialists','Специалисты'],['tariff','Тариф'],['service','Настройки сервиса'],['documents','Документы'],['texts','Системные тексты'],['flags','Функции'],['broadcast','Системное сообщение'],['audit','История изменений']];

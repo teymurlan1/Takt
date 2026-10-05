@@ -1,3 +1,4 @@
+import {entityTranslations} from './content12.js';
 const now=()=>Math.floor(Date.now()/1000);
 const clean=(v,n=1200)=>typeof v==='string'?v.trim().slice(0,n):'';
 const publicName=name=>{const p=String(name||'Клиент').trim().split(/\s+/).filter(Boolean);return p.length>1?`${p[0]} ${Array.from(p[1])[0]||''}.`:p[0]||'Клиент'};
@@ -8,11 +9,11 @@ export const schema7=[
 `CREATE TABLE IF NOT EXISTS telegram_booking_messages(booking_id TEXT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,chat_id TEXT NOT NULL,message_id INTEGER NOT NULL,updated_at INTEGER NOT NULL,PRIMARY KEY(booking_id,chat_id))`
 ];
 
-export async function reviewSummary(db,companyId,limit=3){
+export async function reviewSummary(db,companyId,limit=3,sort='new'){
  const stats=await db.prepare('SELECT COUNT(*) count,COALESCE(ROUND(AVG(rating),1),0) average FROM reviews WHERE company_id=?').bind(companyId).first()||{count:0,average:0};
- const n=Math.max(0,Math.min(50,Number(limit)||3));
- const rows=n?(await db.prepare('SELECT booking_id,client_name,service_name,rating,text,created_at FROM reviews WHERE company_id=? ORDER BY created_at DESC LIMIT ?').bind(companyId,n).all()).results:[];
- return {count:Number(stats.count)||0,average:Number(stats.average)||0,items:rows.map(x=>({...x,client_name:publicName(x.client_name)}))};
+ const n=Math.max(0,Math.min(200,Number(limit)||3)),order={new:'r.created_at DESC',old:'r.created_at ASC',positive:'r.rating DESC,r.created_at DESC',negative:'r.rating ASC,r.created_at DESC',high:'r.rating DESC,r.created_at DESC',low:'r.rating ASC,r.created_at DESC'}[sort]||'r.created_at DESC';
+ const rows=n?(await db.prepare('SELECT r.booking_id,r.client_name,r.service_name,r.rating,r.text,r.created_at,b.service_id FROM reviews r JOIN bookings b ON b.id=r.booking_id WHERE r.company_id=? ORDER BY '+order+' LIMIT ?').bind(companyId,n).all()).results:[];
+ return {count:Number(stats.count)||0,average:Number(stats.average)||0,items:await Promise.all(rows.map(async x=>({...x,service_translations:await entityTranslations(db,'service',x.service_id),client_name:publicName(x.client_name)})))};
 }
 
 export async function createReview(db,userId,input){

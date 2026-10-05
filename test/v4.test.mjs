@@ -8,7 +8,7 @@ async function setup(extra={}){
  const DB=database();DB.sqlite.exec(readFileSync(new URL('../migrations/0001_initial.sql',import.meta.url),'utf8'));DB.sqlite.exec("INSERT INTO memberships VALUES('nail','9002')");
  const env={DB,DEV_MODE:'true',BOT_TOKEN:'test-only',APP_URL:'https://example.com'};
  const req=async(path,method='GET',data,role='company')=>{const r=await worker.fetch(new Request('http://localhost/api'+path,{method,headers:{'x-demo-role':role,'content-type':'application/json'},...(data?{body:JSON.stringify(data)}:{})}),env);return {status:r.status,data:await r.json()}};
- const c=(await req('/companies/nail')).data;assert.equal((await req('/v2/settings','POST',{...c,company_id:'nail',min_notice:0,schedule:Array(7).fill([{start:0,end:1440}]),...extra})).status,200);
+ const c=(await req('/companies/nail')).data;assert.equal((await req('/v2/settings','POST',{...c,company_id:'nail',min_notice:0,notifications:{...c.notifications,daily_summary:false},schedule:Array(7).fill([{start:0,end:1440}]),...extra,notifications:{...c.notifications,daily_summary:false,...extra.notifications}})).status,200);
  const book=(at,extra={},role='client')=>req('/bookings','POST',{company_id:'nail',service_id:'nail-1',starts_at:at,name:'Александр',phone:'+79991234567',request_key:crypto.randomUUID(),...extra},role);
  return {DB,env,req,book};
 }

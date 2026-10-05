@@ -1,3 +1,4 @@
+import {entityTranslations} from './content12.js';
 import {config,legalVersions,LANGS,customText,isMainAdmin,enforceAccount} from './v10.js';
 import {legalDoc} from '../public/i18n.js';
 const now=()=>Math.floor(Date.now()/1000);
@@ -12,7 +13,7 @@ export async function botEntry(env,origin,id,invited=null,callback=null){const d
  await db.prepare('INSERT INTO bot_entry VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET company_id=excluded.company_id,updated_at=excluded.updated_at').bind(id,entry?.company_id||null,now()).run();
  const tenant=entry?.company_id?await db.prepare('SELECT id,name FROM companies WHERE id=? AND active=1').bind(entry.company_id).first():null;
  if(callback?.startsWith('entry:lang:')){const lang=callback.slice(11);if(!cfg.languages.includes(lang))throw Object.assign(new Error('Выберите доступный язык'),{status:400});await db.prepare("INSERT INTO user_app_settings(user_id,language,role,theme,updated_at) VALUES(?,?,?,'light',?) ON CONFLICT(user_id) DO UPDATE SET language=excluded.language,role=CASE WHEN user_app_settings.role='' THEN excluded.role ELSE user_app_settings.role END,updated_at=excluded.updated_at").bind(id,lang,tenant?'client':'specialist',now()).run();prefs=await db.prepare('SELECT * FROM user_app_settings WHERE user_id=?').bind(id).first()}
- const lang=prefs?.language||'ru',L=labels[lang]||labels.ru;
+ const lang=prefs?.language||'ru',L=labels[lang]||labels.ru;if(tenant){const tr=await entityTranslations(db,'company',tenant.id);tenant.name=tr[lang]?.name||tenant.name}
  const base=new URL(env.APP_URL||origin);if(tenant)base.searchParams.set('company',tenant.id);
  const app=(params={})=>{const u=new URL(base);for(const [k,v] of Object.entries(params))u.searchParams.set(k,v);return u.href};
  if(callback?.startsWith('entry:agree:')){if(!prefs?.language||callback.slice(12)!==await getVersion(versions))throw Object.assign(new Error('Откройте актуальные документы'),{status:409});await db.batch([db.prepare("UPDATE user_app_settings SET policy_version=?,consent_version=?,terms_version=?,consent_at=?,updated_at=?,role=CASE WHEN role='' THEN ? ELSE role END WHERE user_id=?").bind(versions.policy,versions.consent,versions.terms,now(),now(),tenant?'client':'specialist',id),...(tenant?[db.prepare('INSERT INTO client_links VALUES(?,?,?,?) ON CONFLICT(user_id,company_id) DO UPDATE SET last_seen=excluded.last_seen').bind(id,tenant.id,now(),Date.now())]:[])]);prefs=await db.prepare('SELECT * FROM user_app_settings WHERE user_id=?').bind(id).first()}

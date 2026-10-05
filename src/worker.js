@@ -1,3 +1,4 @@
+import {localizedBookings} from './content12.js';
 import {admin11,publicContent,applyPromo,recordFunnel} from './v11.js';
 import {adminRole} from './control-auth.js';
 import {adminApi,config,legalVersions,isMainAdmin,enforceAccount,writeLimit,specialistAvailable,publicConfig,enabled,applyNotificationText} from './v10.js';
@@ -119,25 +120,25 @@ async function webhook(req,env){
 export async function api(req,env){
  const url=new URL(req.url),path=url.pathname,db=env.DB;
  if(path==='/api/telegram/webhook')return webhook(req,env);
- if(path==='/api/health')return json({ok:true,version:'11.0.0'});
+ if(path==='/api/health')return json({ok:true,version:'12.0.0'});
  if(!db)fail(503,'База ещё не подключена');
  if(path!=='/api/telegram/setup')await ensureSchema(db);
  if(path==='/api/v11/content'&&req.method==='GET')return json(await publicContent(db,new URL(req.url).searchParams.get('language')||'ru'));
- if(path==='/api/v10/public'&&req.method==='GET')return json(await publicConfig(db));
+ if(path==='/api/v10/public'&&req.method==='GET')return json(await publicConfig(db,'',env));
  if(path==='/api/v2/resolve'){const handle=url.searchParams.get('username')||'';const row=await db.prepare('SELECT company_id FROM specialist_handles WHERE handle=?').bind(handle).first();if(!row)fail(404,'Страница не найдена. Проверьте ссылку специалиста');return json({company_id:row.company_id})}
  const publicCompany=path.match(/^\/api\/v2\/page\/([a-z0-9-]+)$/);
  if(publicCompany&&req.method==='GET'){
   const c=await company(db,publicCompany[1]);
   return json({...publicOptions(c),services:await services(db,c.id),reviews:await reviewSummary(db,c.id,3)});
  }
- if(path==='/api/v7/reviews'&&req.method==='GET'){const id=text(url.searchParams.get('company'),80);if(!/^[a-z0-9-]{1,80}$/.test(id))fail(400,'Некорректный кабинет');await company(db,id);return json(await reviewSummary(db,id,url.searchParams.get('limit')||50))}
+ if(path==='/api/v7/reviews'&&req.method==='GET'){const id=text(url.searchParams.get('company'),80);if(!/^[a-z0-9-]{1,80}$/.test(id))fail(400,'Некорректный кабинет');await company(db,id);return json(await reviewSummary(db,id,url.searchParams.get('limit')||50,url.searchParams.get('sort')||'new'))}
  let user;try{user=await identify(req,env)}catch{fail(401,'Откройте приложение через Telegram. Если оно уже открыто — закройте и откройте снова.')}
  if(path!=='/api/telegram/setup'){await enforceAccount(db,user.id);if(!['GET','HEAD'].includes(req.method))await writeLimit(db,user.id);}
  const controlResponse=await admin11(req,env,user,{json,body});if(controlResponse)return controlResponse;
  if(path==='/api/v10/admin/specialist'&&req.method==='POST'){const action=await body(req.clone());if(['extend','trial'].includes(action.action))return admin11(new Request(new URL('/api/v11/admin/subscription',req.url),{method:'POST',headers:req.headers,body:JSON.stringify(action)}),env,user,{json,body});}
  const adminResponse=await adminApi(req,env,user,{json,body});if(adminResponse)return adminResponse;
  if(path==='/api/v10/invite'&&req.method==='GET'){const id=text(url.searchParams.get('company'),80);await company(db,id);const o=await db.prepare('SELECT s.language FROM memberships m LEFT JOIN user_app_settings s ON s.user_id=m.user_id WHERE m.company_id=? ORDER BY m.rowid LIMIT 1').bind(id).first();return json({language:APP_LANGS.includes(o?.language)?o.language:'ru'})}
- if(path==='/api/v10/config'&&req.method==='GET')return json(await publicConfig(db,user.id));
+ if(path==='/api/v10/config'&&req.method==='GET')return json(await publicConfig(db,user.id,env));
  if(path==='/api/v11/promo'&&req.method==='POST')return json(await applyPromo(db,user,await body(req)));
  if(path==='/api/v11/funnel'&&req.method==='POST')return json(await recordFunnel(db,user,await body(req)));
  if(path==='/api/v5/admin'&&req.method==='GET'){if(!isMainAdmin(env,user.id))fail(403,'Нет доступа');return json({...await overview(db),bot_configured:!!env.BOT_TOKEN})}
@@ -162,7 +163,7 @@ if(path==='/api/v8/profile'){
  }
  if(path==='/api/v8/subscription-stats'&&req.method==='GET'){const id=text(url.searchParams.get('company'),80);if(!await access(db,env,user,id))fail(403,'Нет доступа');const since=now()-30*86400,stats=await db.prepare("SELECT COUNT(*) bookings,COUNT(DISTINCT user_id) clients FROM bookings WHERE company_id=? AND created_at>=?").bind(id,since).first(),notifications=await db.prepare("SELECT COUNT(*) n FROM outbox WHERE created_at>=? AND json_valid(text) AND json_extract(text,'$.takt.company')=?").bind(since,id).first();return json({period_days:30,bookings:Number(stats?.bookings||0),clients:Number(stats?.clients||0),notifications:Number(notifications?.n||0)})}
 if(path==='/api/v72/support'&&req.method==='POST'){
-  if(!(await publicConfig(db,user.id)).flags.help)fail(403,'Функция временно недоступна');
+  if(!(await publicConfig(db,user.id,env)).flags.help)fail(403,'Функция временно недоступна');
   const data=await body(req),message=text(data.message,1500);if(message.length<5)fail(400,'Опишите проблему чуть подробнее');const admins=owners(env);if(!admins.length)fail(503,'Поддержка временно недоступна');
   const recent=await db.prepare('SELECT COUNT(*) n FROM support_requests WHERE user_id=? AND created_at>?').bind(user.id,now()-600).first();if(Number(recent?.n||0)>=3)fail(429,'Подождите немного перед новым обращением');
   const membership=await db.prepare('SELECT m.company_id,c.name FROM memberships m JOIN companies c ON c.id=m.company_id WHERE m.user_id=? AND c.active=1 ORDER BY c.rowid LIMIT 1').bind(user.id).first(),id=crypto.randomUUID(),role=membership?'специалист':'клиент';
@@ -226,14 +227,14 @@ if(path==='/api/v72/support'&&req.method==='POST'){
  if((path==='/api/slots'||path==='/api/next-slot'||path==='/api/availability')&&req.method==='GET'){
   const c=await company(db,url.searchParams.get('company'));
   const moving=url.searchParams.get('booking');let s,exclude='';if(moving){const b=await db.prepare('SELECT * FROM bookings WHERE id=? AND company_id=?').bind(moving,c.id).first();if(!b||b.user_id!==user.id&&!await access(db,env,user,c.id))fail(403,'Нет доступа');s={duration:(b.ends_at-b.starts_at)/60};exclude=b.id}else{s=await enrichService(db,await db.prepare('SELECT * FROM services WHERE id=? AND company_id=? AND active=1').bind(url.searchParams.get('service'),c.id).first());if(!s)fail(404,'Услуга не найдена')}
-  const date=url.searchParams.get('date');if(path==='/api/availability'){dayBounds(date);const days=Math.min(42,Math.max(1,Number(url.searchParams.get('days'))||14)),start=fromLocal(date,0,c.timezone),end=fromLocal(dateShift(date,days),0,c.timezone),buffer=c.buffer*60;if(date<dateShift(localDate(now(),c.timezone),-31)||date>dateShift(localDate(now(),c.timezone),181))fail(400,'Выберите дату в периоде записи');const busy=(await db.prepare("SELECT starts_at,ends_at,0 blocked FROM bookings WHERE company_id=? AND id<>? AND status IN ('pending','confirmed') AND starts_at<? AND ends_at>? UNION ALL SELECT starts_at,ends_at,1 blocked FROM blocked_slots WHERE company_id=? AND starts_at<? AND ends_at>?").bind(c.id,exclude,end+buffer,start-buffer,c.id,end,start).all()).results;return json(Array.from({length:days},(_,i)=>{const d=dateShift(date,i),slots=possibleSlots(c,s,d,busy);return {date:d,count:slots.length,first:slots[0]||null}}))}if(path==='/api/next-slot'){dayBounds(date);const limit=dateShift(localDate(now(),c.timezone),c.horizon),start=fromLocal(date,0,c.timezone),end=fromLocal(dateShift(limit,1),0,c.timezone),buffer=c.buffer*60;const busy=(await db.prepare("SELECT starts_at,ends_at,0 blocked FROM bookings WHERE company_id=? AND id<>? AND status IN ('pending','confirmed') AND starts_at<? AND ends_at>? UNION ALL SELECT starts_at,ends_at,1 blocked FROM blocked_slots WHERE company_id=? AND starts_at<? AND ends_at>?").bind(c.id,exclude,end+buffer,start-buffer,c.id,end,start).all()).results;for(let d=dateShift(date,1);d<=limit;d=dateShift(d,1)){const found=possibleSlots(c,s,d,busy);if(found.length)return json({date:d,starts_at:found[0]})}return json({date:null})}return json(await availableSlots(db,c,s,date,exclude));
+  const date=url.searchParams.get('date');if(path==='/api/availability'){dayBounds(date);const days=Math.min(42,Math.max(1,Number(url.searchParams.get('days'))||14)),start=fromLocal(date,0,c.timezone),end=fromLocal(dateShift(date,days),0,c.timezone),buffer=c.buffer*60;if(date<dateShift(localDate(now(),c.timezone),-31)||date>dateShift(localDate(now(),c.timezone),181))fail(400,'Выберите дату в периоде записи');const busy=(await db.prepare("SELECT starts_at,ends_at,0 blocked FROM bookings WHERE company_id=? AND id<>? AND status IN ('pending','confirmed') AND starts_at<? AND ends_at>? UNION ALL SELECT starts_at,ends_at,1 blocked FROM blocked_slots WHERE company_id=? AND starts_at<? AND ends_at>?").bind(c.id,exclude,end+buffer,start-buffer,c.id,end,start).all()).results;return json(Array.from({length:days},(_,i)=>{const d=dateShift(date,i),slots=possibleSlots(c,s,d,busy);return {date:d,count:slots.length,first:slots[0]||null}}))}if(path==='/api/next-slot'){dayBounds(date);const limit=dateShift(localDate(now(),c.timezone),c.horizon),start=fromLocal(date,0,c.timezone),end=fromLocal(dateShift(limit,1),0,c.timezone),buffer=c.buffer*60;const busy=(await db.prepare("SELECT starts_at,ends_at,0 blocked FROM bookings WHERE company_id=? AND id<>? AND status IN ('pending','confirmed') AND starts_at<? AND ends_at>? UNION ALL SELECT starts_at,ends_at,1 blocked FROM blocked_slots WHERE company_id=? AND starts_at<? AND ends_at>?").bind(c.id,exclude,end+buffer,start-buffer,c.id,end,start).all()).results;for(let d=dateShift(date,1);d<=limit;d=dateShift(d,1)){const found=possibleSlots(c,s,d,busy);if(found.length)return json({date:d,starts_at:found[0]})}return json({date:null,reason:date>limit?'horizon':'no_availability',last_date:limit})}return json(await availableSlots(db,c,s,date,exclude));
  }
  if(path==='/api/bookings'&&req.method==='GET'){
   const scope=url.searchParams.get('scope'),c=url.searchParams.get('company');
   let where='b.user_id=?',value=user.id;
   if(scope==='company'){if(!await access(db,env,user,c))fail(403,'Нет доступа');where='b.company_id=?';value=c}
   if(scope==='owner')fail(403,'Используйте свой кабинет');
-  return json((await db.prepare(`SELECT b.*,(SELECT outcome FROM booking_outcomes WHERE booking_id=b.id) visit_outcome,c.name AS company_name,COALESCE(a.state,'unknown') AS attendance_state,a.responded_at AS attendance_responded_at,r.rating AS review_rating FROM bookings b JOIN companies c ON c.id=b.company_id LEFT JOIN booking_attendance a ON a.booking_id=b.id LEFT JOIN reviews r ON r.booking_id=b.id WHERE ${where} ORDER BY b.starts_at DESC LIMIT 500`).bind(value).all()).results);
+  const rows=(await db.prepare(`SELECT b.*,(SELECT outcome FROM booking_outcomes WHERE booking_id=b.id) visit_outcome,c.name AS company_name,COALESCE(a.state,'unknown') AS attendance_state,a.responded_at AS attendance_responded_at,r.rating AS review_rating FROM bookings b JOIN companies c ON c.id=b.company_id LEFT JOIN booking_attendance a ON a.booking_id=b.id LEFT JOIN reviews r ON r.booking_id=b.id WHERE ${where} ORDER BY b.starts_at DESC LIMIT 500`).bind(value).all()).results;return json(await localizedBookings(db,rows));
  }
  if(path==='/api/bookings'&&req.method==='POST'){
   const b=await body(req),c=await company(db,b.company_id);if(b.manual&&!await access(db,env,user,c.id))fail(403,'Нет доступа');let bookingUser=b.manual?'manual-'+c.id+'-'+text(b.phone,24).replace(/\D/g,''):user.id;

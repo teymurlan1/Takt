@@ -39,6 +39,6 @@ export function messagePayload(b,c,event,admin=false,previous=null,lang='ru'){
  if(event==='cancelled'&&admin)lines.push('',L.cancel_admin_note);
  if(event==='reminder')lines.push('',L.see_you);
  if(event==='client_2h')lines.push('',b.attendance_state==='unknown'?L.confirm_visit:L.see_you);
- return {text:lines.join('\n'),parse_mode:'HTML',takt:{booking:b.id,company:b.company_id,start:b.starts_at,event,admin,lang}};
+ return {text:lines.join('\n'),parse_mode:'HTML',takt:{booking:b.id,company:b.company_id,start:b.starts_at,event,admin,lang,previous}};
 }
 

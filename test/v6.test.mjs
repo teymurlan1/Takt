@@ -13,7 +13,7 @@ function setup(){
   const req=async(path,method='GET',data,role='company')=>{const r=await worker.fetch(new Request('http://localhost/api'+path,{method,headers:{'x-demo-role':role,'content-type':'application/json'},...(data?{body:JSON.stringify(data)}:{})}),env);return {status:r.status,data:await r.json()}};
   return {DB,env,req};
 }
-async function configure(t,extra={}){const c=(await t.req('/companies/nail')).data;const r=await t.req('/v2/settings','POST',{...c,company_id:'nail',min_notice:0,schedule:Array(7).fill([{start:0,end:1440}]),...extra});assert.equal(r.status,200,JSON.stringify(r.data));return (await t.req('/companies/nail')).data}
+async function configure(t,extra={}){const c=(await t.req('/companies/nail')).data;const r=await t.req('/v2/settings','POST',{...c,company_id:'nail',min_notice:0,schedule:Array(7).fill([{start:0,end:1440}]),...extra,notifications:{...c.notifications,daily_summary:false,...extra.notifications}});assert.equal(r.status,200,JSON.stringify(r.data));return (await t.req('/companies/nail')).data}
 async function book(t,start){const r=await t.req('/bookings','POST',{company_id:'nail',service_id:'nail-1',starts_at:start,name:'Клиент',phone:'+79991234567',request_key:crypto.randomUUID()},'client');assert.equal(r.status,201,JSON.stringify(r.data));return r.data}
 const alignedAfter=seconds=>Math.ceil((Date.now()/1000+seconds)/900)*900;
 
@@ -32,7 +32,7 @@ test('client attendance confirmation is isolated and visible to specialist',asyn
   const rows=(await t.req('/bookings?scope=company&company=nail')).data;assert.equal(rows.find(x=>x.id===b.id).attendance_state,'coming');
 });
 
-test('early decline cancels and late decline only warns specialist',async()=>{
+test('early decline cancels and late decline only warns specialist',async(ctx)=>{ctx.mock.method(Date,'now',()=>Date.parse('2027-01-05T08:00:00Z'));
   const t=setup();await configure(t,{cancel_hours:24});
   const early=await book(t,alignedAfter(3*86400));const no1=await t.req('/v6/attendance','POST',{booking_id:early.id,state:'not_coming'},'client');assert.equal(no1.status,200);assert.equal(no1.data.late,false);assert.equal(no1.data.booking_status,'cancelled');
   const late=await book(t,alignedAfter(2*3600));const no2=await t.req('/v6/attendance','POST',{booking_id:late.id,state:'not_coming'},'client');assert.equal(no2.status,200);assert.equal(no2.data.late,true);assert.equal(no2.data.booking_status,'pending');

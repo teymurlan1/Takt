@@ -131,3 +131,14 @@ This release extends the existing application and database. Existing tenant IDs,
 - Live Telegram booking messages retain message IDs. Temporary edit failures retry editing rather than sending a duplicate. Ambiguous initial send outcomes remain flagged for operational review instead of being blindly resent.
 
 Validation: `npm run check`, 91 automated tests, and functional DOM checks at widths 320, 390, 768, 1024 and 1440. Telegram delivery is mocked in automated tests. DOM checks do not certify physical iPhone/Android keyboard behavior or visual rendering in Telegram WebView; these require a device check. Existing payment integration via `SUBSCRIPTION_PAYMENT_URL` is preserved; this release does not add a payment provider or automatic billing.
+
+
+## Takt 12.0
+
+The existing Worker/D1 architecture and data are preserved. Migration 0012 adds optional per-language service and public-profile content with fallback to the original fields. Supported UI languages: Russian, Kazakh, Azerbaijani and Uzbek. Review bodies and author names remain user content; the Control Center stays Russian.
+
+Theme tokens now cover legacy surfaces, dialogs, calendars and nested cards. Responsive layouts keep equal-size calendar dates, aligned service media slots and compact client/history cards. Review ordering is applied on the server before its bounded result limit. Distant dates distinguish the booking horizon from unavailable slots.
+
+Subscriptions use manual renewal: the configured support username (or the owner's saved Telegram username) must identify a personal account, not a bot. Renewal period is included in the prepared Telegram message. Payment and promo backend capabilities remain compatible but are not presented as automatic payment in the user subscription screen.
+
+Validation: `npm run check`, `npm test`, `npm run test:ui`. DOM coverage includes all four languages, light/dark state, roles and widths from 320 to 1440. DOM tests do not establish native keyboard behavior or visual geometry on physical devices. Real iPhone, Android and Telegram tablet keyboard/orientation checks remain necessary before claiming device certification.
