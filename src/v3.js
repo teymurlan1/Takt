@@ -29,7 +29,7 @@ export function when(t,zone,lang='ru'){const locale=localeByLang[lang]||localeBy
 export function messagePayload(b,c,event,admin=false,previous=null,lang='ru'){
  const L=tgLang(lang),w=when(b.starts_at,c.timezone,lang),money=new Intl.NumberFormat(localeByLang[lang]||'ru-RU').format(b.price)+' ₽';
  const title=event==='created'?(admin?L.created_admin:L.created_client):(L[event]||L.moved);
- if(event==='review_request')return {text:`<b>${L.review_request}</b>\n\n${lang==='ru'?'Будем рады вашему отзыву — он поможет специалисту становиться лучше, а другим клиентам сделать выбор.':lang==='kk'?'Пікіріңіз маманға жақсара түсуге, ал басқа клиенттерге таңдау жасауға көмектеседі.':lang==='az'?'Rəyiniz mütəxəssisə inkişaf etməyə, digər müştərilərə isə seçim etməyə kömək edəcək.':'Fikringiz mutaxassisga yaxshilanishga, boshqa mijozlarga esa tanlov qilishga yordam beradi.'}\n\n${escHtml(c.name)} · ${escHtml(b.service_name)}`,parse_mode:'HTML',takt:{booking:b.id,company:b.company_id,start:b.starts_at,event,admin:false}};
+ if(event==='review_request')return {text:`<b>${L.review_request}</b>\n\n${lang==='ru'?'Будем рады вашему отзыву — он поможет специалисту становиться лучше, а другим клиентам сделать выбор.':lang==='kk'?'Пікіріңіз маманға жақсара түсуге, ал басқа клиенттерге таңдау жасауға көмектеседі.':lang==='az'?'Rəyiniz mütəxəssisə inkişaf etməyə, digər müştərilərə isə seçim etməyə kömək edəcək.':'Fikringiz mutaxassisga yaxshilanishga, boshqa mijozlarga esa tanlov qilishga yordam beradi.'}\n\n${escHtml(c.name)} · ${escHtml(b.service_name)}`,parse_mode:'HTML',takt:{booking:b.id,company:b.company_id,start:b.starts_at,event,admin:false,lang}};
  let lines=[`<b>${title}</b>`];
  if(previous){const old=when(previous,c.timezone,lang);lines.push('',`${L.was}: ${old.date} · ${old.time}`,`${L.became}: ${w.date} · ${w.time}`)}else lines.push('',`📅 <b>${event==='reminder'&&localDate(b.starts_at,c.timezone)===dateShift(localDate(Date.now()/1000,c.timezone),1)?L.tomorrow:''}${w.date} · ${w.time}</b>`);
  lines.push(`${escHtml(b.service_name)} · ${money}`,admin?`${L.client}: ${escHtml(b.name)}`:`${L.specialist}: ${escHtml(c.name)}`);
@@ -39,5 +39,5 @@ export function messagePayload(b,c,event,admin=false,previous=null,lang='ru'){
  if(event==='cancelled'&&admin)lines.push('',L.cancel_admin_note);
  if(event==='reminder')lines.push('',L.confirm_visit);
  if(event==='client_2h')lines.push('',b.attendance_state==='unknown'?L.confirm_visit:L.see_you);
- return {text:lines.join('\n'),parse_mode:'HTML',takt:{booking:b.id,company:b.company_id,start:b.starts_at,event,admin}};
+ return {text:lines.join('\n'),parse_mode:'HTML',takt:{booking:b.id,company:b.company_id,start:b.starts_at,event,admin,lang}};
 }
