@@ -40,6 +40,8 @@ jobs:
           grep -q "version:'8.1.0'" src/worker.js
           grep -q 'Переписка через Takt отключена' src/worker.js
           grep -q 'review-notice:' src/worker.js
+          grep -q 'Личный Telegram клиента' test/v72.test.mjs
+          ! grep -q 'Отправить через Takt' test/v72.test.mjs
       - name: Commit Takt 8.1
         run: |
           git config user.name "github-actions[bot]"
