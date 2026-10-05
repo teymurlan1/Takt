@@ -115,3 +115,19 @@ QR: qrcode-generator 1.4.4, MIT (public/qr-LICENSE). Шрифт Manrope — OFL 
 - Таблицы `0005_takt_v5.sql` добавляются без изменения пользовательских данных. Маркер schema_versions исключает повторные DDL при каждом холодном старте.
 
 Проверено: 38 серверных тестов (подпись/роли/изоляция/SQL-защита от пересечений, уведомления с моделированием времени и ответов Telegram, перенос/отмена/повторы, часовые пояса, контроль доступа), функциональные DOM-сценарии интерфейса и синтаксис JS. Реальный Telegram-клиент, физическая мобильная клавиатура и фактическая доставка личных сообщений требуют проверки на устройствах; тесты не отправляют сообщения реальным клиентам.
+
+
+
+## Takt 10.0
+
+This release extends the existing application and database. Existing tenant IDs, bookings, subscriptions, reviews and saved language/theme preferences are retained. The runtime applies only the additive v10 schema when the v9 marker exists; it does not rerun older preference migrations.
+
+- Shared brand tokens retain the reference “Написать” color `#c9ff32`; compact booking, service, profile and review layouts adapt to phone, tablet and desktop.
+- Searchable select sheets preserve unsaved forms and close through Telegram Back. Client services appear immediately after the specialist header.
+- Self-service cancellation requires strictly more than the configured cutoff (24 hours by default), checked on the server. Existing specialist rescheduling rules are preserved separately.
+- First Telegram entry collects language and versioned document consent, preserving the invited specialist throughout. New accounts default to light theme.
+- Manual bookings notify known invited clients; unknown contacts can still be booked. No-show outcomes are separate from attendance and excluded from revenue and reviews.
+- The main administrator can manage validated service configuration, tariff, language availability, document links/versions, optional feature flags, access controls and subscription extensions. Changes are audited; broadcast preview sends nothing and confirmation queues deduplicated deliveries.
+- Live Telegram booking messages retain message IDs. Temporary edit failures retry editing rather than sending a duplicate. Ambiguous initial send outcomes remain flagged for operational review instead of being blindly resent.
+
+Validation: `npm run check`, 90 automated tests, and functional DOM checks at widths 320, 390, 768, 1024 and 1440. Telegram delivery is mocked in automated tests. DOM checks do not certify physical iPhone/Android keyboard behavior or visual rendering in Telegram WebView; these require a device check. Existing payment integration via `SUBSCRIPTION_PAYMENT_URL` is preserved; this release does not add a payment provider or automatic billing.

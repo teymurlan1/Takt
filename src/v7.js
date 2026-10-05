@@ -21,9 +21,12 @@ export async function createReview(db,userId,input){
  const b=await db.prepare('SELECT * FROM bookings WHERE id=?').bind(bookingId).first();
  if(!b)throw Object.assign(new Error('Запись не найдена'),{status:404});
  if(String(b.user_id)!==String(userId))throw Object.assign(new Error('Нет доступа к этой записи'),{status:403});
+ if((await db.prepare('SELECT outcome FROM booking_outcomes WHERE booking_id=?').bind(b.id).first())?.outcome==='no_show'||b.ends_at>now())throw Object.assign(new Error('Отзыв доступен только после состоявшегося визита'),{status:409});
  if(b.status!=='done')throw Object.assign(new Error('Отзыв можно оставить после завершённой записи'),{status:409});
  const exists=await db.prepare('SELECT rating FROM reviews WHERE booking_id=?').bind(bookingId).first();
  if(exists)throw Object.assign(new Error('Вы уже оставили отзыв по этой записи'),{status:409});
- await db.prepare('INSERT INTO reviews(booking_id,company_id,user_id,client_name,service_name,rating,text,created_at) VALUES(?,?,?,?,?,?,?,?)').bind(b.id,b.company_id,String(userId),b.name,b.service_name,rating,comment,now()).run();
+ const result=await db.prepare('INSERT OR IGNORE INTO reviews(booking_id,company_id,user_id,client_name,service_name,rating,text,created_at) VALUES(?,?,?,?,?,?,?,?)').bind(b.id,b.company_id,String(userId),b.name,b.service_name,rating,comment,now()).run();
+ if(!result.meta?.changes)throw Object.assign(new Error('Вы уже оставили отзыв по этой записи'),{status:409});
  return {ok:true,rating};
 }
+

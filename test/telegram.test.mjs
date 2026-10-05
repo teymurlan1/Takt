@@ -20,7 +20,7 @@ test('bot setup is owner-only and webhook authenticates Telegram requests',async
   assert.equal((await webhook('forged')).status,403);
   const start=await (await webhook(secret,'/start c_nail')).json();
   assert.equal(start.method,'sendMessage');assert.equal(start.chat_id,123);
-  assert.equal(start.reply_markup.inline_keyboard[0][0].web_app.url,'https://example.com/?company=nail');
+  assert.match(start.reply_markup.inline_keyboard[0][0].url,/documents/);assert.equal(DB.sqlite.prepare('SELECT company_id FROM bot_entry WHERE user_id=?').get('123').company_id,'nail');
   assert.match((await (await webhook(secret,'/id')).json()).text,/123/);
   assert.equal((await (await webhook(secret,'/start','private',777)).json()).method,'sendMessage');
   assert.deepEqual(await (await webhook(secret,'/start','private',777)).json(),{ok:true});
@@ -30,3 +30,4 @@ test('bot setup is owner-only and webhook authenticates Telegram requests',async
   const failure=await setup('owner');assert.equal(failure.status,502);assert.ok(!(await failure.text()).includes('fake secret details'));
  }finally{globalThis.fetch=original}
 });
+
