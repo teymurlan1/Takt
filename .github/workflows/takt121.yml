@@ -8,6 +8,7 @@ on:
       - 'scripts/takt121-patch.py'
       - 'scripts/takt121-fix.py'
       - 'scripts/takt121-finalize.py'
+      - 'scripts/takt121-hotfix.py'
 
 permissions:
   contents: write
@@ -31,6 +32,7 @@ jobs:
           python3 scripts/takt121-patch.py
           python3 scripts/takt121-fix.py
           python3 scripts/takt121-finalize.py
+          python3 scripts/takt121-hotfix.py
       - name: Syntax check
         run: npm run check
       - name: Unit and integration tests
