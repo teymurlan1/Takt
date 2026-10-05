@@ -7,6 +7,7 @@ on:
       - '.github/workflows/takt121.yml'
       - 'scripts/takt121-patch.py'
       - 'scripts/takt121-fix.py'
+      - 'scripts/takt121-finalize.py'
 
 permissions:
   contents: write
@@ -28,6 +29,7 @@ jobs:
         run: |
           python3 scripts/takt121-patch.py
           python3 scripts/takt121-fix.py
+          python3 scripts/takt121-finalize.py
       - name: Syntax check
         run: npm run check
       - name: Unit and integration tests
