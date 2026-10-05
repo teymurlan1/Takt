@@ -1,5 +1,8 @@
 // Shared copy for new controls; order: Kazakh, Azerbaijani, Uzbek.
 export const copy10={
+'Не удалось выполнить запрос. Попробуйте ещё раз.':['Сұрауды орындау мүмкін болмады. Қайталап көріңіз.','Sorğunu yerinə yetirmək mümkün olmadı. Yenidən cəhd edin.','So‘rovni bajarib bo‘lmadi. Qayta urinib ko‘ring.'],
+'месяц':['ай','ay','oy'],
+'Начало работы':['Жұмысты бастау','İşə başlama','Ish boshlash'],
 'Запись':['Жазылу','Qeydiyyat','Yozilish'],
 'стандарт':['стандарт','standart','standart'],
 'За месяц':['Бір айда','Bir ay ərzində','Bir oy ichida'],

@@ -1,4 +1,4 @@
-import {copy10} from './copy-v10.js?v=100';
+import {copy10} from './copy-v10.js?v=101';
 export const LANGUAGES=[['ru','🇷🇺','Русский'],['kk','🇰🇿','Қазақша'],['az','🇦🇿','Azərbaycan dili'],['uz','🇺🇿','O‘zbekcha']];
 export const localeFor=lang=>({ru:'ru-RU',kk:'kk-KZ',az:'az-AZ',uz:'uz-UZ'}[lang]||'ru-RU');
 const D={
