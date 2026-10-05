@@ -55,7 +55,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json package-lock.json public/index.html public/i18n.js public/admin-v10.js public/app-v2.js public/landing.js public/takt-v121.css src/v10.js src/v11.js src/bot-entry.js src/v2.js src/worker.js src/delivery.js test/v8.test.mjs test/v81.test.mjs test/v121.test.mjs scripts/ui-regression.mjs
+          git add package.json package-lock.json public/index.html public/i18n.js public/admin-v10.js public/app-v2.js public/landing.js public/takt-v121.css src/v3.js src/v10.js src/v11.js src/bot-entry.js src/v2.js src/worker.js src/delivery.js test/v8.test.mjs test/v81.test.mjs test/v121.test.mjs scripts/ui-regression.mjs
           if git diff --cached --quiet; then
             echo "No generated changes to commit"
             exit 0
