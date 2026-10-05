@@ -30,6 +30,20 @@ old="if(req.method==='GET'){const x=existing||{};return json({language:x.languag
 new="if(req.method==='GET'){const x=existing||{};return json({language:APP_LANGS.includes(x.language)?x.language:'',role:x.role||inferred||'',theme:x.theme||'light'"
 if old not in s: raise SystemExit('profile language GET marker missing')
 s=s.replace(old,new,1)
+# Never trust a Telegram username alone to bind a manual booking to an old numeric account.
+# Usernames can change owner. A typed username is always claimed by the current Telegram account on /start.
+a="else if(b.manual&&manualUsername){const linked=await db.prepare(\"SELECT p.user_id FROM telegram_profiles p JOIN client_links l ON l.user_id=p.user_id AND l.company_id=? WHERE lower(p.username)=? ORDER BY l.last_seen DESC LIMIT 1\").bind(c.id,manualUsername).first();if(linked?.user_id)bookingUser=String(linked.user_id)}"
+if a not in s: raise SystemExit('unsafe username auto-link marker missing')
+s=s.replace(a,'',1)
+write(p,s)
+
+# A manually-created confirmed booking should let the client explicitly confirm/cancel it
+# and open Takt. Reuse the attendance callback, which already enforces ownership and 24h rules.
+p='src/delivery.js'; s=read(p)
+old="else if(meta.admin&&meta.event==='created'&&b.status==='pending'){payload.reply_markup={inline_keyboard:[[{text:L.confirm,style:'success',callback_data:`booking:${b.id}:confirm`},{text:L.decline,style:'danger',callback_data:`booking:${b.id}:decline`}],[{text:L.booking,style:'primary',web_app:{url:make()}}]]}}\nelse{payload.reply_markup={inline_keyboard:[[{text:meta.event==='cancelled'&&!meta.admin?L.other:meta.admin||reminder?L.booking:L.mine,style:'primary',web_app:{url:meta.event==='cancelled'&&!meta.admin?new URL('/?company='+b.company_id,env.APP_URL||'https://takt.teymurstudent.workers.dev').href:make()}}]]};"
+new="else if(meta.admin&&meta.event==='created'&&b.status==='pending'){payload.reply_markup={inline_keyboard:[[{text:L.confirm,style:'success',callback_data:`booking:${b.id}:confirm`},{text:L.decline,style:'danger',callback_data:`booking:${b.id}:decline`}],[{text:L.booking,style:'primary',web_app:{url:make()}}]]}}\nelse if(!meta.admin&&meta.event==='created'&&b.status==='confirmed'){payload.reply_markup={inline_keyboard:[[{text:L.confirm,style:'success',callback_data:`visit:${b.id}:yes:${b.starts_at}`},{text:L.cancel,style:'danger',callback_data:`visit:${b.id}:no:${b.starts_at}`}],[{text:L.open,style:'primary',web_app:{url:make()}}]]}}\nelse{payload.reply_markup={inline_keyboard:[[{text:meta.event==='cancelled'&&!meta.admin?L.other:meta.admin||reminder?L.booking:L.mine,style:'primary',web_app:{url:meta.event==='cancelled'&&!meta.admin?new URL('/?company='+b.company_id,env.APP_URL||'https://takt.teymurstudent.workers.dev').href:make()}}]]};"
+if old not in s: raise SystemExit('delivery manual confirmation marker missing')
+s=s.replace(old,new,1)
 write(p,s)
 
 # Visible version label follows the release.
@@ -61,6 +75,20 @@ test('new manual client claim inherits specialist language until client chooses 
  const worker=fs.readFileSync(new URL('../src/worker.js',import.meta.url),'utf8');
  assert.ok(worker.includes("APP_LANGS.includes(prefs?.language)?prefs.language:APP_LANGS.includes(owner?.language)?owner.language:'ru'"));
  assert.ok(worker.includes("claimed.lang==='az'?'Hazırdır ✅':'Готово ✅'"));
+});
+
+test('manual booking username is never auto-linked by username alone',()=>{
+ const worker=fs.readFileSync(new URL('../src/worker.js',import.meta.url),'utf8');
+ assert.equal(worker.includes('JOIN client_links l ON l.user_id=p.user_id AND l.company_id=? WHERE lower(p.username)=?'),false);
+ assert.ok(worker.includes('manual_client_claims'));
+});
+
+test('manually created client notification offers confirm cancel and open Takt',()=>{
+ const delivery=fs.readFileSync(new URL('../src/delivery.js',import.meta.url),'utf8');
+ assert.ok(delivery.includes("!meta.admin&&meta.event==='created'&&b.status==='confirmed'"));
+ assert.ok(delivery.includes('callback_data:`visit:${b.id}:yes:${b.starts_at}`'));
+ assert.ok(delivery.includes('callback_data:`visit:${b.id}:no:${b.starts_at}`'));
+ assert.ok(delivery.includes('text:L.open'));
 });
 """
 write(p,s)
