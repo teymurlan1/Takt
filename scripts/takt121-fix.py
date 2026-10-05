@@ -35,6 +35,14 @@ if old not in s: raise SystemExit('landing weekdays marker missing')
 s=s.replace(old,new,1)
 write(p,s)
 
+# Client first-run guide is rendered before generic DOM localization, so make it bilingual directly.
+p='public/app-v2.js'; s=read(p)
+start=s.index('function tour(){')
+end=s.index('async function openLinkedBooking',start)
+tour="""function tour(){if(!isClient())return landing(S.config?.tariff,S.language);const x=S.tenant,az=S.language==='az',T=az?{tag:'ŞƏXSİ QEYD SƏHİFƏNİZ',title:'Qeyd:',lead:'Xidməti və uyğun vaxtı seçin — bir dəqiqədən az çəkəcək.',book:'Qeyd ol',steps:['Xidməti seçin','Uyğun vaxtı tapın','Qeydi təsdiqləyin','24 saat əvvəl xatırlatma, 2 saat əvvəl isə gəlişin təsdiqi 🔔'],foot:'Gələcək görüşləriniz və tarixçə «Qeydlərim» bölməsindədir.'}:{tag:'ВАША ЛИЧНАЯ СТРАНИЦА ЗАПИСИ',title:'Запись к',lead:'Выберите услугу и удобное время — всё займёт меньше минуты.',book:'Записаться',steps:['Выберите услугу','Найдите удобное время','Подтвердите запись','Напоминание за 24 часа, подтверждение визита — за 2 часа 🔔'],foot:'Ваши будущие встречи и история — в разделе «Мои записи».'};return `<section class=\"client-intro\">${imageTag(x?.photo,x?.name)}<span class=\"eyebrow\">${T.tag}</span><h1>${T.title} ${esc(x?.name||(az?'mütəxəssis':'специалисту'))}</h1><p>${T.lead}</p><button class=\"primary\" id=\"skip-tour\">${T.book} ${icon('arrow')}</button><ol class=\"v3-steps\">${T.steps.map((t,i)=>`<li><span>0${i+1}</span><p>${t}</p></li>`).join('')}</ol><p class=\"note\">${T.foot}</p></section>`}\n"""
+s=s[:start]+tour+s[end:]
+write(p,s)
+
 # Manual-username claim responses must follow the user's chosen language as well.
 p='src/worker.js'; s=read(p)
 old="if(manualClaim[1]==='ignore'){await env.DB.prepare('UPDATE manual_client_claims SET claimed_at=?,claimed_user_id=? WHERE booking_id=? AND claimed_at IS NULL').bind(now(),'ignored:'+cb.from.id,manualClaim[2]).run();await telegram(env,'answerCallbackQuery',{callback_query_id:cb.id,text:'Запись не привязана'});return json({method:'editMessageText',chat_id:cb.from.id,message_id:cb.message?.message_id,text:'Хорошо. Эта запись не привязана к вашему аккаунту Takt.'})}"
