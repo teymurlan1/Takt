@@ -146,6 +146,7 @@ if(el.dataset.addInterval!==undefined){const i=el.dataset.addInterval,container=
 if(el.hasAttribute('data-remove-interval')){if(el.closest('.work-intervals').children.length>1)el.closest('.work-interval').remove();else toast('Выключите день, чтобы сделать его выходным');return}
 if(el.id==='learn-more'){document.querySelector('#how-it-works')?.scrollIntoView({behavior:'smooth'});return}
 if(el.id==='enter-client'){S.mode='client';S.tenant=null;S.page='my';await render();return}
+if(el.dataset.page==='legal'&&!S.me){openSheet('Документы',legalPage());return}
 if(el.dataset.page){booking=null;rememberNavigation();pageScroll.set(S.page,scrollY);S.page=el.dataset.page;const y=S.page==='calendar'?0:(pageScroll.get(S.page)||0);await render();requestAnimationFrame(()=>scrollTo({top:y,behavior:'auto'}));return}
 if(el.id==='refresh'){await render();return}
 if(el.id==='register-back'){saveDraft();S.step--;await render();return}
