@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/takt121.yml'
       - 'scripts/takt121-patch.py'
+      - 'scripts/takt121-fix.py'
 
 permissions:
   contents: write
@@ -24,7 +25,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Apply Takt 12.1 patch
-        run: python3 scripts/takt121-patch.py
+        run: |
+          python3 scripts/takt121-patch.py
+          python3 scripts/takt121-fix.py
       - name: Syntax check
         run: npm run check
       - name: Unit and integration tests
@@ -35,6 +38,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json public/index.html public/i18n.js public/admin-v10.js public/app-v2.js public/landing.js public/takt-v121.css src/v10.js src/v11.js src/bot-entry.js src/v2.js src/worker.js test/v121.test.mjs
+          git add package.json package-lock.json public/index.html public/i18n.js public/admin-v10.js public/app-v2.js public/landing.js public/takt-v121.css src/v10.js src/v11.js src/bot-entry.js src/v2.js src/worker.js test/v8.test.mjs test/v81.test.mjs test/v121.test.mjs scripts/ui-regression.mjs
           git commit -m "Takt 12.1: final pilot hardening, client affinity and calendar polish"
           git push
