@@ -1,5 +1,6 @@
 import {schema12,entityTranslations,translationStatements} from './content12.js';
 import {schema11} from './v11.js';
+import {ensure140b as ensure140} from './billing140.js';
 import {schema10,config,specialistAvailable,effectiveTariff} from './v10.js';
 import {schema3,options,validateOptions,localDate,fromLocal,dateShift} from './v3.js';
 import {schema7} from './v7.js';
@@ -33,7 +34,7 @@ export const schema=[
 ...schema11,...schema12
 ];
 const initialized=new WeakMap();
-export async function ensureSchema(db){if(!initialized.has(db))initialized.set(db,(async()=>{await db.prepare('CREATE TABLE IF NOT EXISTS schema_versions(version INTEGER PRIMARY KEY)').run();if(await db.prepare('SELECT 1 FROM schema_versions WHERE version=12').first())return;const current=await db.prepare('SELECT 1 FROM schema_versions WHERE version=11').first();const previous=await db.prepare('SELECT 1 FROM schema_versions WHERE version IN (9,10)').first();await db.batch([...(current?schema12:previous?[...schema10,...schema11,...schema12]:schema).map(sql=>db.prepare(sql)),db.prepare('INSERT OR IGNORE INTO schema_versions VALUES(11)'),db.prepare('INSERT OR IGNORE INTO schema_versions VALUES(12)')])})().catch(e=>{initialized.delete(db);throw e}));await initialized.get(db)}
+export async function ensureSchema(db){if(!initialized.has(db))initialized.set(db,(async()=>{await(async()=>{await db.prepare('CREATE TABLE IF NOT EXISTS schema_versions(version INTEGER PRIMARY KEY)').run();if(await db.prepare('SELECT 1 FROM schema_versions WHERE version=12').first())return;const current=await db.prepare('SELECT 1 FROM schema_versions WHERE version=11').first();const previous=await db.prepare('SELECT 1 FROM schema_versions WHERE version IN (9,10)').first();await db.batch([...(current?schema12:previous?[...schema10,...schema11,...schema12]:schema).map(sql=>db.prepare(sql)),db.prepare('INSERT OR IGNORE INTO schema_versions VALUES(11)'),db.prepare('INSERT OR IGNORE INTO schema_versions VALUES(12)')])})();await ensure140(db)})().catch(e=>{initialized.delete(db);throw e}));await initialized.get(db)}
 const err=(status,message)=>{throw Object.assign(new Error(message),{status})};
 const clean=(s,n=200)=>typeof s==='string'?s.trim().slice(0,n):'';
 const stamp=()=>Math.floor(Date.now()/1000);
