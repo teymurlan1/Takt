@@ -121,7 +121,7 @@ async function webhook(req,env){
 export async function api(req,env){
  const url=new URL(req.url),path=url.pathname,db=env.DB;
  if(path==='/api/telegram/webhook')return webhook(req,env);
- if(path==='/api/health')return json({ok:true,version:'12.5.0'});
+ if(path==='/api/health')return json({ok:true,version:'13.2.0'});
  if(!db)fail(503,'База ещё не подключена');
  if(path!=='/api/telegram/setup')await ensureSchema(db);
  if(path==='/api/v11/content'&&req.method==='GET')return json(await publicContent(db,new URL(req.url).searchParams.get('language')||'ru'));
