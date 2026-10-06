@@ -9,7 +9,7 @@ new MutationObserver(run).observe(document.documentElement,{childList:true,subtr
 (()=>{const count=()=>document.querySelectorAll('.dashboard-kpis strong:not([data-r131])').forEach(el=>{const t=el.textContent.trim();if(!/^\d{1,4}$/.test(t))return;el.dataset.r131='1';const n=+t;if(n<2||matchMedia('(prefers-reduced-motion:reduce)').matches)return;const s=performance.now();const step=now=>{const k=Math.min(1,(now-s)/600);el.textContent=Math.round(n*(1-Math.pow(1-k,3)));if(k<1)requestAnimationFrame(step);else el.textContent=n};requestAnimationFrame(step)});
 new MutationObserver(()=>setTimeout(count,80)).observe(document.documentElement,{childList:true,subtree:true})})();
 /* 13.2: админ-панель на азербайджанском (только точные совпадения интерфейса, введённые админом тексты не трогаем) */
-import('/az132.js?v=132').then(({AZ})=>{
+import('/az132.js?v=140').then(({AZ})=>{
 const exact=el=>{if(document.documentElement.lang!=='az')return;const w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);let n;while(n=w.nextNode()){const t=n.nodeValue.trim();if(t&&AZ[t]&&!n.parentElement.closest('input,textarea,[data-user-content]'))n.nodeValue=n.nodeValue.replace(t,AZ[t])}el.querySelectorAll('[placeholder],[title],[aria-label]').forEach(e=>['placeholder','title','aria-label'].forEach(a=>{const v=e.getAttribute(a)?.trim();if(v&&AZ[v])e.setAttribute(a,AZ[v])}))};
 let t;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(()=>document.querySelectorAll('[data-admin-content]').forEach(exact),120)}).observe(document.documentElement,{childList:true,subtree:true});
 }).catch(()=>{});

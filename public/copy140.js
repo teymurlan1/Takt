@@ -1,0 +1,67 @@
+// Takt 14.0: тексты подписки, рефералов, обращений и «Не доставлено». «Takt» не переводится.
+export const COPY={
+ru:{
+ inc_h:'Что входит',inc:['Онлайн-запись и напоминания клиентам','Страница специалиста, ссылка и QR','Клиенты, услуги, расписание и статистика','Клиенты записываются бесплатно'],
+ aft_h:'Что будет после окончания',aft:['Данные и клиенты сохраняются','Клиенты по-прежнему пользуются бесплатно','Новые записи ставятся на паузу','После продления всё возобновится'],
+ active:d=>`Активна до ${d}`,trial:d=>`Пробный период до ${d}`,grace:d=>`Льготные дни до ${d}`,expired:'Доступ приостановлен',none:'Подписка не найдена',left:n=>`Осталось ${n} дн.`,
+ grace_note:'Новые записи на паузе. Продлите доступ — и приём возобновится.',expired_note:'Данные и клиенты сохранены. Свяжитесь с поддержкой, чтобы возобновить приём записей.',
+ pay:'Связаться по оплате',pay_note:'Онлайн-оплата пока не подключена: продление выполняет поддержка вручную.',
+ ref_h:'Пригласите коллегу',ref_text:d=>`Вы и коллега получите по ${d} дней бонуса.`,ref_code:'Ваш код',ref_copy:'Скопировать',ref_share:'Поделиться',ref_copied:'Код скопирован',ref_share_text:c=>`Попробуйте Takt — онлайн-запись клиентов. Мой код при регистрации: ${c}`,
+ ref_ph:'Код приглашения',ref_apply:'Применить',ref_done:d=>`Готово! Начислено ${d} дней`,ref_stats:(n,d)=>`Приглашено: ${n} · бонус: ${d} дн.`,
+ hist_h:'История платежей',hist_empty:'Платежей пока нет',days:n=>`${n} дн.`,
+ pay_status:{manual:'Продление поддержкой',paid:'Оплачено',bonus:'Бонус',pending:'Ожидает',failed:'Ошибка',refunded:'Возврат'},
+ err:'Не удалось загрузить данные подписки',retry:'Повторить',
+ nav_support:'Поддержка',nav_undelivered:'Не доставлено',
+ t_status:{new:'Новое',in_progress:'В работе',closed:'Закрыто'},t_role:{specialist:'Специалист',client:'Клиент'},t_reply_ph:'Ответ пользователю',t_send:'Ответить',t_work:'В работу',t_close:'Закрыть',t_sent:'Ответ отправлен',t_not_delivered:'Ответ сохранён, но не доставлен',t_empty:'Обращений пока нет',t_all:'Все',t_ticket:'Обращение',t_saved:'Сохранено',
+ u_note:'Показаны сообщения за 7 дней, которые не дошли до получателя. Текст сообщений не показывается.',u_empty:'Недоставленных сообщений нет',u_attempts:'попыток',
+ u_reason:{blocked:'Пользователь заблокировал бота',failed:'Telegram отклонил сообщение',unknown:'Исход неясен, повтор не делается',retry:'Ждёт повторной попытки',sending:'Отправляется',pending:'Ожидает отправки'}
+},
+kk:{
+ inc_h:'Не кіреді',inc:['Онлайн жазылу және клиенттерге еске салу','Маман беті, сілтеме және QR','Клиенттер, қызметтер, кесте және статистика','Клиенттер тегін жазылады'],
+ aft_h:'Мерзім біткеннен кейін',aft:['Деректер мен клиенттер сақталады','Клиенттер әлі де тегін қолданады','Жаңа жазылулар кідіртіледі','Ұзартқаннан кейін бәрі қайта жалғасады'],
+ active:d=>`${d} дейін белсенді`,trial:d=>`Сынақ мерзімі ${d} дейін`,grace:d=>`Жеңілдік күндері ${d} дейін`,expired:'Қолжетімділік тоқтатылды',none:'Жазылым табылмады',left:n=>`${n} күн қалды`,
+ grace_note:'Жаңа жазылулар кідіртілді. Қолжетімділікті ұзартыңыз — қабылдау жалғасады.',expired_note:'Деректер мен клиенттер сақталды. Жазылуды қайта бастау үшін қолдауға жазыңыз.',
+ pay:'Төлем бойынша байланысу',pay_note:'Онлайн төлем әзірге қосылмаған: ұзартуды қолдау қолмен жасайды.',
+ ref_h:'Әріптесті шақырыңыз',ref_text:d=>`Сіз де, әріптесіңіз де ${d} күн бонус аласыз.`,ref_code:'Сіздің кодыңыз',ref_copy:'Көшіру',ref_share:'Бөлісу',ref_copied:'Код көшірілді',ref_share_text:c=>`Takt-ты қолданып көріңіз — онлайн жазылу. Тіркелуде менің кодым: ${c}`,
+ ref_ph:'Шақыру коды',ref_apply:'Қолдану',ref_done:d=>`Дайын! ${d} күн қосылды`,ref_stats:(n,d)=>`Шақырылды: ${n} · бонус: ${d} күн`,
+ hist_h:'Төлем тарихы',hist_empty:'Төлемдер әзірге жоқ',days:n=>`${n} күн`,
+ pay_status:{manual:'Қолдау ұзартты',paid:'Төленді',bonus:'Бонус',pending:'Күтуде',failed:'Қате',refunded:'Қайтарылды'},
+ err:'Жазылым деректерін жүктеу мүмкін болмады',retry:'Қайталау',
+ nav_support:'Қолдау',nav_undelivered:'Жеткізілмеді',
+ t_status:{new:'Жаңа',in_progress:'Жұмыста',closed:'Жабылды'},t_role:{specialist:'Маман',client:'Клиент'},t_reply_ph:'Пайдаланушыға жауап',t_send:'Жауап беру',t_work:'Жұмысқа',t_close:'Жабу',t_sent:'Жауап жіберілді',t_not_delivered:'Жауап сақталды, бірақ жеткізілмеді',t_empty:'Өтініштер әзірге жоқ',t_all:'Барлығы',t_ticket:'Өтініш',t_saved:'Сақталды',
+ u_note:'Алушыға жетпеген соңғы 7 күндегі хабарламалар көрсетілген. Хабарлама мәтіні көрсетілмейді.',u_empty:'Жеткізілмеген хабарлама жоқ',u_attempts:'әрекет',
+ u_reason:{blocked:'Пайдаланушы ботты бұғаттады',failed:'Telegram хабарламаны қабылдамады',unknown:'Нәтиже белгісіз, қайталанбайды',retry:'Қайталауды күтуде',sending:'Жіберілуде',pending:'Жіберуді күтуде'}
+},
+az:{
+ inc_h:'Nələr daxildir',inc:['Onlayn qeyd və müştərilərə xatırlatmalar','Mütəxəssis səhifəsi, link və QR','Müştərilər, xidmətlər, cədvəl və statistika','Müştərilər pulsuz qeydiyyatdan keçir'],
+ aft_h:'Bitdikdən sonra nə olur',aft:['Məlumatlar və müştərilər saxlanılır','Müştərilər yenə pulsuz istifadə edir','Yeni qeydlər dayandırılır','Yenilədikdən sonra hər şey bərpa olunur'],
+ active:d=>`${d} tarixinədək aktiv`,trial:d=>`Sınaq müddəti ${d} tarixinədək`,grace:d=>`Güzəşt günləri ${d} tarixinədək`,expired:'Giriş dayandırılıb',none:'Abunə tapılmadı',left:n=>`${n} gün qalıb`,
+ grace_note:'Yeni qeydlər dayandırılıb. Girişi yeniləyin — qəbul bərpa olunacaq.',expired_note:'Məlumatlar və müştərilər saxlanılıb. Qəbulu bərpa etmək üçün dəstəyə yazın.',
+ pay:'Ödəniş üzrə əlaqə',pay_note:'Onlayn ödəniş hələ qoşulmayıb: yeniləməni dəstək əl ilə edir.',
+ ref_h:'Həmkarınızı dəvət edin',ref_text:d=>`Siz və həmkarınız ${d} gün bonus alacaqsınız.`,ref_code:'Sizin kodunuz',ref_copy:'Kopyala',ref_share:'Paylaş',ref_copied:'Kod kopyalandı',ref_share_text:c=>`Takt-ı sınayın — onlayn qeyd. Qeydiyyatda mənim kodum: ${c}`,
+ ref_ph:'Dəvət kodu',ref_apply:'Tətbiq et',ref_done:d=>`Hazırdır! ${d} gün əlavə edildi`,ref_stats:(n,d)=>`Dəvət edilib: ${n} · bonus: ${d} gün`,
+ hist_h:'Ödəniş tarixçəsi',hist_empty:'Hələ ödəniş yoxdur',days:n=>`${n} gün`,
+ pay_status:{manual:'Dəstək yeniləyib',paid:'Ödənilib',bonus:'Bonus',pending:'Gözləyir',failed:'Xəta',refunded:'Geri qaytarılıb'},
+ err:'Abunə məlumatları yüklənmədi',retry:'Təkrar et',
+ nav_support:'Dəstək',nav_undelivered:'Çatdırılmayıb',
+ t_status:{new:'Yeni',in_progress:'İşdə',closed:'Bağlı'},t_role:{specialist:'Mütəxəssis',client:'Müştəri'},t_reply_ph:'İstifadəçiyə cavab',t_send:'Cavab ver',t_work:'İşə götür',t_close:'Bağla',t_sent:'Cavab göndərildi',t_not_delivered:'Cavab saxlanıldı, lakin çatdırılmadı',t_empty:'Hələ müraciət yoxdur',t_all:'Hamısı',t_ticket:'Müraciət',t_saved:'Saxlanıldı',
+ u_note:'Son 7 gündə alıcıya çatmayan mesajlar göstərilir. Mesajın mətni göstərilmir.',u_empty:'Çatdırılmayan mesaj yoxdur',u_attempts:'cəhd',
+ u_reason:{blocked:'İstifadəçi botu bloklayıb',failed:'Telegram mesajı qəbul etmədi',unknown:'Nəticə bəlli deyil, təkrar edilmir',retry:'Təkrar cəhd gözləyir',sending:'Göndərilir',pending:'Göndərilməsi gözlənilir'}
+},
+uz:{
+ inc_h:'Nimalar kiradi',inc:['Onlayn yozilish va mijozlarga eslatmalar','Mutaxassis sahifasi, havola va QR','Mijozlar, xizmatlar, jadval va statistika','Mijozlar bepul yoziladi'],
+ aft_h:'Muddat tugagach nima bo‘ladi',aft:['Ma’lumotlar va mijozlar saqlanadi','Mijozlar baribir bepul foydalanadi','Yangi yozuvlar to‘xtatiladi','Uzaytirilgach hammasi tiklanadi'],
+ active:d=>`${d} gacha faol`,trial:d=>`Sinov muddati ${d} gacha`,grace:d=>`Imtiyoz kunlari ${d} gacha`,expired:'Kirish to‘xtatilgan',none:'Obuna topilmadi',left:n=>`${n} kun qoldi`,
+ grace_note:'Yangi yozuvlar to‘xtatilgan. Kirishni uzaytiring — qabul tiklanadi.',expired_note:'Ma’lumotlar va mijozlar saqlangan. Qabulni tiklash uchun yordamga yozing.',
+ pay:'To‘lov bo‘yicha bog‘lanish',pay_note:'Onlayn to‘lov hali ulanmagan: uzaytirishni yordam xizmati qo‘lda bajaradi.',
+ ref_h:'Hamkasbingizni taklif qiling',ref_text:d=>`Siz ham, hamkasbingiz ham ${d} kun bonus olasiz.`,ref_code:'Sizning kodingiz',ref_copy:'Nusxalash',ref_share:'Ulashish',ref_copied:'Kod nusxalandi',ref_share_text:c=>`Taktni sinab ko‘ring — onlayn yozilish. Ro‘yxatdan o‘tishda mening kodim: ${c}`,
+ ref_ph:'Taklif kodi',ref_apply:'Qo‘llash',ref_done:d=>`Tayyor! ${d} kun qo‘shildi`,ref_stats:(n,d)=>`Taklif qilingan: ${n} · bonus: ${d} kun`,
+ hist_h:'To‘lovlar tarixi',hist_empty:'Hozircha to‘lovlar yo‘q',days:n=>`${n} kun`,
+ pay_status:{manual:'Yordam uzaytirdi',paid:'To‘langan',bonus:'Bonus',pending:'Kutilmoqda',failed:'Xato',refunded:'Qaytarilgan'},
+ err:'Obuna ma’lumotlari yuklanmadi',retry:'Takrorlash',
+ nav_support:'Yordam',nav_undelivered:'Yetkazilmadi',
+ t_status:{new:'Yangi',in_progress:'Jarayonda',closed:'Yopilgan'},t_role:{specialist:'Mutaxassis',client:'Mijoz'},t_reply_ph:'Foydalanuvchiga javob',t_send:'Javob berish',t_work:'Ishga olish',t_close:'Yopish',t_sent:'Javob yuborildi',t_not_delivered:'Javob saqlandi, lekin yetkazilmadi',t_empty:'Hozircha murojaatlar yo‘q',t_all:'Hammasi',t_ticket:'Murojaat',t_saved:'Saqlandi',
+ u_note:'Oxirgi 7 kunda qabul qiluvchiga yetmagan xabarlar ko‘rsatilgan. Xabar matni ko‘rsatilmaydi.',u_empty:'Yetkazilmagan xabarlar yo‘q',u_attempts:'urinish',
+ u_reason:{blocked:'Foydalanuvchi botni bloklagan',failed:'Telegram xabarni qabul qilmadi',unknown:'Natija noma’lum, takrorlanmaydi',retry:'Qayta urinishni kutmoqda',sending:'Yuborilmoqda',pending:'Yuborilishi kutilmoqda'}
+}};
+export const tr=lang=>COPY[lang]||COPY.ru;
