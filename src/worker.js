@@ -1,4 +1,5 @@
 import {localizedBookings} from './content12.js';
+import {icsResponse} from './v125.js';
 import {admin11,publicContent,applyPromo,recordFunnel} from './v11.js';
 import {adminRole} from './control-auth.js';
 import {adminApi,config,legalVersions,isMainAdmin,enforceAccount,writeLimit,specialistAvailable,publicConfig,enabled,applyNotificationText} from './v10.js';
@@ -120,7 +121,7 @@ async function webhook(req,env){
 export async function api(req,env){
  const url=new URL(req.url),path=url.pathname,db=env.DB;
  if(path==='/api/telegram/webhook')return webhook(req,env);
- if(path==='/api/health')return json({ok:true,version:'12.0.0'});
+ if(path==='/api/health')return json({ok:true,version:'12.5.0'});
  if(!db)fail(503,'База ещё не подключена');
  if(path!=='/api/telegram/setup')await ensureSchema(db);
  if(path==='/api/v11/content'&&req.method==='GET')return json(await publicContent(db,new URL(req.url).searchParams.get('language')||'ru'));
@@ -133,6 +134,7 @@ export async function api(req,env){
  }
  if(path==='/api/v7/reviews'&&req.method==='GET'){const id=text(url.searchParams.get('company'),80);if(!/^[a-z0-9-]{1,80}$/.test(id))fail(400,'Некорректный кабинет');await company(db,id);return json(await reviewSummary(db,id,url.searchParams.get('limit')||50,url.searchParams.get('sort')||'new'))}
  let user;try{user=await identify(req,env)}catch{fail(401,'Откройте приложение через Telegram. Если оно уже открыто — закройте и откройте снова.')}
+ if(path==='/api/v125/ics'&&req.method==='GET')return icsResponse(db,user,url.searchParams.get('booking'),c=>access(db,env,user,c));
  if(path!=='/api/telegram/setup'){await enforceAccount(db,user.id);if(!['GET','HEAD'].includes(req.method))await writeLimit(db,user.id);}
  const controlResponse=await admin11(req,env,user,{json,body});if(controlResponse)return controlResponse;
  if(path==='/api/v10/admin/specialist'&&req.method==='POST'){const action=await body(req.clone());if(['extend','trial'].includes(action.action))return admin11(new Request(new URL('/api/v11/admin/subscription',req.url),{method:'POST',headers:req.headers,body:JSON.stringify(action)}),env,user,{json,body});}
