@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {bookingIcs} from '../src/v125.js';
+test('ics содержит время, название и напоминание',()=>{const s=bookingIcs({id:'b1',service_name:'Маникюр, гель',starts_at:1790000000,ends_at:1790003600},'Студия');assert.ok(s.startsWith('BEGIN:VCALENDAR'));assert.ok(s.includes('DTSTART:20260921'));assert.ok(s.includes('Маникюр\\, гель'));assert.ok(s.includes('BEGIN:VALARM'))});
