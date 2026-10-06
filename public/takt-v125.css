@@ -1,0 +1,22 @@
+/* Takt 12.5 — мягкий редизайн поверх 12.1. Палитра не меняется: используются только --takt-* токены. */
+:root{--r125-card:20px;--r125-ctl:14px;--r125-ease:cubic-bezier(.2,.8,.2,1);--r125-shadow:0 1px 2px #1821330a,0 8px 24px #2857e60d;--r125-shadow-up:0 2px 4px #1821330d,0 14px 32px #2857e61a}
+html[data-theme=dark]{--r125-shadow:0 1px 0 #ffffff08 inset;--r125-shadow-up:0 10px 30px #00000055}
+body{font-feature-settings:"tnum" 1,"cv11" 1;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+h1,h2,h3{letter-spacing:-.015em;text-wrap:balance}
+:is(.editor-card,.service-card,.review-card,.visit-card,.client-card72,.profile-v8,.settings-card,.analytics-card,.share-card,.faq-card,.calendar-day){border-radius:var(--r125-card)!important;box-shadow:var(--r125-shadow)!important;transition:transform .18s var(--r125-ease),box-shadow .18s var(--r125-ease)}
+@media(hover:hover){:is(.service-card,.visit-card,.client-card72,.share-card):hover{transform:translateY(-2px);box-shadow:var(--r125-shadow-up)!important}}
+:is(button,.secondary,.text-button,input,select,textarea,.picker-trigger){border-radius:var(--r125-ctl)}
+button{transition:transform .12s var(--r125-ease),filter .15s,background-color .15s}
+button:active:not(:disabled){transform:scale(.97)}
+:is(button,a,input,select,textarea,[tabindex]):focus-visible{outline:2px solid var(--takt-blue);outline-offset:2px}
+.selected,.segmented .selected,.choice-pills .selected{box-shadow:0 0 0 3px color-mix(in srgb,var(--takt-green) 35%,transparent)!important}
+.v2-bottom{backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px);background:color-mix(in srgb,var(--takt-surface) 86%,transparent)!important;border-top:1px solid var(--takt-line)}
+.v2-main>*{animation:r125-in .32s var(--r125-ease) both}
+@keyframes r125-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.startup{position:relative;overflow:hidden}.startup::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,color-mix(in srgb,var(--takt-green) 28%,transparent) 50%,transparent 70%);transform:translateX(-100%);animation:r125-shimmer 1.4s infinite}
+@keyframes r125-shimmer{to{transform:translateX(100%)}}
+.r125-cal{display:inline-flex;align-items:center;gap:6px;margin-top:8px;min-height:36px;padding:0 14px;border:1px solid var(--takt-line);border-radius:999px;background:var(--takt-surface);color:var(--takt-blue);font:600 13px/1 inherit;cursor:pointer}
+.r125-cal:hover{border-color:var(--takt-blue)}
+.r125-offline{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);transform:translate(-50%,-140%);z-index:99;padding:10px 16px;border-radius:999px;background:var(--takt-blue);color:#fff;font:600 13px/1.2 inherit;box-shadow:var(--r125-shadow-up);transition:transform .3s var(--r125-ease)}
+.r125-offline.on{transform:translate(-50%,0)}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
