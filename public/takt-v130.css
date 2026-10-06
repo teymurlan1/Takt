@@ -1,0 +1,50 @@
+/* Takt 13.0: единые карточки, шрифты, адаптив под телефон/планшет, звёзды отзыва */
+:root{--r130-radius:18px;--r130-gap:12px}
+body{font-family:Manrope,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;font-feature-settings:"tnum" 1}
+h1,h2,h3{letter-spacing:-.01em;line-height:1.2}
+:is(p,small,span,label,button,input,select,textarea){font-family:inherit}
+small,.note,.dialog-sub{line-height:1.45}
+/* единые карточки */
+:is(.visit-card,.review-card,.editor-card,.more-card,.faq-card,.legal-card,.share-card,.location-card,.next72-row,.attention-row){border-radius:var(--r130-radius);box-shadow:0 1px 2px rgba(20,20,40,.05),0 6px 18px rgba(20,20,40,.05);transition:transform .18s ease,box-shadow .18s ease}
+:is(.visit-card,.next72-row,.attention-row,.review-card){min-height:84px;overflow-wrap:anywhere}
+:is(.visit-card,.next72-row):active{transform:scale(.99)}
+:is(.next72-actions,.attention-actions){display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-items:stretch}
+:is(.next72-actions,.attention-actions)>:is(button,.r130-slot){min-height:40px;width:100%;border-radius:12px;justify-content:center}
+.r130-slot{visibility:hidden;pointer-events:none}
+/* звёзды отзыва */
+.rating-field{display:flex!important;flex-direction:row-reverse;justify-content:center;gap:4px;border:0;padding:0;margin:8px 0 16px}
+.rating-field legend{width:100%;text-align:center;margin-bottom:8px;float:left}
+.rating-field label{position:relative;flex:0 0 auto;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.rating-field input{position:absolute;inset:0;width:100%;height:100%;opacity:0;margin:0;cursor:pointer;z-index:2}
+.rating-field label span{display:grid!important;place-items:center;width:52px;height:52px;font-size:34px;line-height:1;color:#c9ccd6;background:none!important;border:0!important;box-shadow:none!important;transition:color .12s,transform .12s}
+.rating-field label:has(input:checked) span,.rating-field label:has(input:checked)~label span,.rating-field label:hover span,.rating-field label:hover~label span{color:#f5b301}
+.rating-field label:active span{transform:scale(1.18)}
+/* телефон */
+@media (max-width:600px){main,#app>*{--r130-pad:14px}.visit-card{grid-template-columns:auto 1fr auto;gap:10px;padding:14px}:is(.next72-actions,.attention-actions){grid-template-columns:repeat(3,minmax(0,1fr))}h1{font-size:clamp(24px,7vw,30px)}button,input,select,textarea{font-size:16px}}
+/* планшет */
+@media (min-width:768px){#app>*{max-width:1040px;margin-inline:auto}.settings-card form,.settings-card .settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 20px}.settings-card :is(h2,h3,.wide,.note,button[type=submit],.form-error,fieldset){grid-column:1/-1}.editor-card{padding:24px}.quick-grid{grid-template-columns:repeat(4,1fr)}.review-list{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--r130-gap)}}
+@media (min-width:1100px){#app>*{max-width:1180px}.review-list{grid-template-columns:repeat(3,1fr)}}
+/* страница специалиста для клиента */
+.client-location,.service-cards>*{border-radius:var(--r130-radius)}
+.service-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:var(--r130-gap)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation-duration:.01ms!important}}
+/* 13.1: анимации */
+@keyframes r131-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes r131-pop{0%{transform:scale(.96)}60%{transform:scale(1.03)}100%{transform:scale(1)}}
+.screen-enter :is(.visit-card,.next72-row,.attention-row,.review-card,.editor-card,.more-card,.service-cards>*,.dashboard-kpis>div){animation:r131-rise .38s cubic-bezier(.2,.7,.2,1) both}
+.screen-enter :is(.visit-card,.next72-row,.review-card,.more-card):nth-child(2){animation-delay:.05s}
+.screen-enter :is(.visit-card,.next72-row,.review-card,.more-card):nth-child(3){animation-delay:.1s}
+.screen-enter :is(.visit-card,.next72-row,.review-card,.more-card):nth-child(n+4){animation-delay:.15s}
+button{transition:transform .12s ease,box-shadow .18s ease,opacity .18s}
+button:not(:disabled):active{transform:scale(.97)}
+.primary:not(:disabled){transition:transform .12s,box-shadow .18s}
+.primary:not(:disabled):hover{box-shadow:0 6px 18px rgba(60,90,255,.25)}
+#toast.show{animation:r131-pop .3s ease}
+.rating-field label:has(input:checked) span{animation:r131-pop .3s ease}
+/* 13.2: подписка */
+.subscription-v12{border-radius:22px;padding:22px;background:linear-gradient(145deg,rgba(90,110,255,.10),rgba(90,110,255,.02));border:1px solid rgba(90,110,255,.18);box-shadow:0 8px 28px rgba(40,50,120,.08)}
+.subscription-v12-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.subscription-v12 :is(h2,h3){margin:0 0 6px}
+.subscription-v12 :is(.badge,.pill,.chip){border-radius:999px;font-weight:700}
+.subscription-v12 .primary{width:100%;min-height:48px;margin-top:14px;border-radius:14px}
+@media (min-width:768px){.subscription-v12{max-width:720px}.subscription-v12 .primary{width:auto;padding-inline:28px}}
