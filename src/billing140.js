@@ -1,6 +1,7 @@
 import {requireAdmin} from './control-auth.js';
 import {localMinute,localDate,fromLocal,dateShift,defaults} from './v3.js';
 import {setTicketStatus,replyToTicket,ensure140} from './v140.js';
+import {ensure142} from './tools140.js';
 // 14.0 billing layer. Additive schema; no payment provider is connected yet (manual extension + payment history are the seam).
 export const GRACE_DAYS=3,REFERRAL_BONUS_DAYS=7,REFERRAL_MAX_REWARDS=12,REFERRAL_WINDOW_DAYS=14,QUIET_FROM=22,QUIET_TO_MINUTES=540;
 export const schema140b=[
@@ -10,7 +11,7 @@ export const schema140b=[
 `CREATE INDEX IF NOT EXISTS referrals_referrer ON referrals(referrer_company)`,
 `CREATE TABLE IF NOT EXISTS subscription_notices(company_id TEXT NOT NULL,kind INTEGER NOT NULL,period_end INTEGER NOT NULL,created_at INTEGER NOT NULL,PRIMARY KEY(company_id,kind,period_end))`
 ];
-export async function ensure140b(db){await ensure140(db);if(await db.prepare('SELECT 1 FROM schema_versions WHERE version=141').first())return;await db.batch([...schema140b.map(s=>db.prepare(s)),db.prepare('INSERT OR IGNORE INTO schema_versions VALUES(141)')])}
+export async function ensure140b(db){await ensure140(db);if(!await db.prepare('SELECT 1 FROM schema_versions WHERE version=141').first())await db.batch([...schema140b.map(s=>db.prepare(s)),db.prepare('INSERT OR IGNORE INTO schema_versions VALUES(141)')]);await ensure142(db)}
 const now=()=>Math.floor(Date.now()/1000);
 export function subscriptionState(sub,t=now()){
  const trial=Number(sub?.trial_ends_at||0),paid=Number(sub?.paid_until||0),end=Math.max(trial,paid),grace=end+GRACE_DAYS*86400;

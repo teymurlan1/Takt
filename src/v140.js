@@ -1,6 +1,7 @@
 import {adminRole} from './control-auth.js';
 import {permissions} from './control-auth.js';
 import {escHtml} from './v3.js';
+import {botTextOverride} from './bot140.js';
 // 14.0 — support lives in the bot chat. Additive schema only. Authentication: Telegram webhook secret (checked by caller).
 export const SUPPORT_HOURLY_LIMIT=3,SUPPORT_STATE_TTL=86400;
 export const schema140=[
@@ -58,7 +59,7 @@ export async function handleSupportUpdate(env,db,{m,cb}){
  if(cb){
   const d=String(cb.data||''),from=String(cb.from.id);if(!d.startsWith('sup:'))return null;
   const answer=text=>send(env,'answerCallbackQuery',{callback_query_id:cb.id,...(text?{text}:{})});
-  if(d==='sup:new'){const L=supportCopy(await langOf(db,from));await setState(db,from,'await_ticket');await answer();await send(env,'sendMessage',{chat_id:from,text:L.ask,parse_mode:'HTML'});return {ok:true}}
+  if(d==='sup:new'){const lg=await langOf(db,from),L=supportCopy(lg);await setState(db,from,'await_ticket');await answer();await send(env,'sendMessage',{chat_id:from,text:await botTextOverride(db,'support_ask',lg)||L.ask,parse_mode:'HTML'});return {ok:true}}
   const x=d.match(/^sup:([rwc]):([0-9]+)$/);if(!x)return {ok:true};
   if(!await isSupportAdmin(db,env,from)){await answer('Нет доступа');return {ok:true}}
   const id=Number(x[2]);
@@ -68,7 +69,7 @@ export async function handleSupportUpdate(env,db,{m,cb}){
  if(!m||m.chat?.type!=='private'||!Number.isSafeInteger(m.chat.id)||m.chat.id<=0)return null;
  const from=String(m.chat.id),raw=typeof m.text==='string'?m.text.trim():(typeof m.caption==='string'?m.caption.trim():''),command=raw.startsWith('/')?raw.split(/\s+/)[0].split('@')[0]:'',arg=raw.split(/\s+/)[1]||'';
  const lang=await langOf(db,from),L=supportCopy(lang);
- if(command==='/support'||(command==='/start'&&arg==='support')){await setState(db,from,'await_ticket');await send(env,'sendMessage',{chat_id:from,text:L.ask,parse_mode:'HTML'});return {ok:true}}
+ if(command==='/support'||(command==='/start'&&arg==='support')){await setState(db,from,'await_ticket');await send(env,'sendMessage',{chat_id:from,text:await botTextOverride(db,'support_ask',lang)||L.ask,parse_mode:'HTML'});return {ok:true}}
  const state=await getState(db,from);
  if(command==='/cancel'){if(state){await clearState(db,from);await send(env,'sendMessage',{chat_id:from,text:L.cancelled})}return {ok:true,handled:!!state}}
  if(command)return null;
