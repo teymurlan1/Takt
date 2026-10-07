@@ -46,23 +46,35 @@ export async function manualExtend(db,{company,days,amount=0,currency='RUB',note
  await db.batch([db.prepare("INSERT INTO payments(id,company_id,amount,currency,status,provider,days,note,created_by,created_at) VALUES(?,?,?,?,'manual','manual',?,?,?,?)").bind(id,company,Math.max(0,Math.trunc(Number(amount)||0)),String(currency).slice(0,5),d,String(note).slice(0,200),String(actor),t),...grantStatements(db,sub,d,t),db.prepare('INSERT INTO admin_audit(id,actor,action,target,before_value,after_value,created_at) VALUES(?,?,?,?,?,?,?)').bind(crypto.randomUUID(),String(actor),'subscription.manual_extend',company,String(Math.max(sub.paid_until||0,sub.trial_ends_at||0)),String(d)+'d',t)]);
  return {ok:true,id};
 }
-// ---- end-of-subscription notices: 7 / 3 / 1 days before and on the day; one per (company, kind, period) ----
+// ---- end-of-subscription notices: 3 days before, on the last day (exact end date/time) and once after the end ----
+// Every notice carries a button that opens the subscription screen of the app. One notice per (company, kind, period).
+const LOCALE={ru:'ru-RU',kk:'kk-KZ',az:'az-AZ',uz:'uz-UZ'};
+export function endStamp(ts,tz,lang){
+ const loc=LOCALE[lang]||LOCALE.ru,mk=z=>{const d=new Date(ts*1000);return new Intl.DateTimeFormat(loc,{timeZone:z,day:'numeric',month:'long',year:'numeric'}).format(d)+', '+new Intl.DateTimeFormat(loc,{timeZone:z,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(d)};
+ try{return mk(tz)}catch{return mk('UTC')}
+}
 const NOTICE={
- ru:{n:d=>`⏳ Доступ специалиста Takt заканчивается через ${d} дн. Продлите заранее — записи клиентов не прервутся.`,zero:`⏰ Срок доступа Takt закончился. Данные и клиенты сохранены, клиенты по-прежнему пользуются бесплатно. Новые записи на паузе — продлите доступ, и они возобновятся.`,btn:'Продлить'},
- kk:{n:d=>`⏳ Takt мамандық қолжетімділігі ${d} күннен кейін аяқталады. Алдын ала ұзартыңыз — клиент жазылулары үзілмейді.`,zero:`⏰ Takt қолжетімділік мерзімі аяқталды. Деректер мен клиенттер сақталды, клиенттер тегін қолдана береді. Жаңа жазылулар кідіртілді — ұзартсаңыз, қайта жалғасады.`,btn:'Ұзарту'},
- az:{n:d=>`⏳ Takt mütəxəssis girişi ${d} gün sonra bitir. Əvvəlcədən yeniləyin — müştəri qeydləri kəsilməz.`,zero:`⏰ Takt giriş müddəti bitdi. Məlumatlar və müştərilər saxlanılıb, müştərilər pulsuz istifadə edir. Yeni qeydlər dayandırılıb — yenilədikdə bərpa olunacaq.`,btn:'Yenilə'},
- uz:{n:d=>`⏳ Takt mutaxassis kirishi ${d} kundan keyin tugaydi. Oldindan uzaytiring — mijoz yozuvlari to‘xtamaydi.`,zero:`⏰ Takt kirish muddati tugadi. Ma’lumotlar va mijozlar saqlangan, mijozlar bepul foydalanadi. Yangi yozuvlar to‘xtatilgan — uzaytirsangiz, tiklanadi.`,btn:'Uzaytirish'}
+ ru:{d3:s=>`⏳ <b>Доступ к Takt заканчивается через 3 дня</b>\n\nДата окончания: <b>${s}</b>.\nПродлите заранее — записи клиентов не прервутся.`,last:s=>`⏰ <b>Последний день доступа к Takt</b>\n\nДоступ закончится <b>${s}</b>.\nПродлите сейчас, чтобы новые записи не встали на паузу.`,end:(s,on)=>`⏰ <b>Срок доступа Takt закончился</b> (${s}).\nДанные и клиенты сохранены, клиенты по-прежнему пользуются бесплатно.\n`+(on?'Новые записи на паузе — продлите доступ, и они возобновятся.':'Продлите доступ, чтобы работать без ограничений.'),btn:'💳 Продлить подписку'},
+ kk:{d3:s=>`⏳ <b>Takt қолжетімділігі 3 күннен кейін аяқталады</b>\n\nАяқталу күні: <b>${s}</b>.\nАлдын ала ұзартыңыз — клиент жазылулары үзілмейді.`,last:s=>`⏰ <b>Takt қолжетімділігінің соңғы күні</b>\n\nҚолжетімділік <b>${s}</b> аяқталады.\nЖаңа жазылулар кідірмеуі үшін қазір ұзартыңыз.`,end:(s,on)=>`⏰ <b>Takt қолжетімділік мерзімі аяқталды</b> (${s}).\nДеректер мен клиенттер сақталды, клиенттер тегін қолдана береді.\n`+(on?'Жаңа жазылулар кідіртілді — ұзартсаңыз, қайта жалғасады.':'Шектеусіз жұмыс істеу үшін қолжетімділікті ұзартыңыз.'),btn:'💳 Жазылымды ұзарту'},
+ az:{d3:s=>`⏳ <b>Takt girişi 3 gün sonra bitir</b>\n\nBitmə tarixi: <b>${s}</b>.\nƏvvəlcədən yeniləyin — müştəri qeydləri kəsilməz.`,last:s=>`⏰ <b>Takt girişinin son günü</b>\n\nGiriş <b>${s}</b> tarixində bitəcək.\nYeni qeydlər dayanmasın deyə indi yeniləyin.`,end:(s,on)=>`⏰ <b>Takt giriş müddəti bitdi</b> (${s}).\nMəlumatlar və müştərilər saxlanılıb, müştərilər pulsuz istifadə edir.\n`+(on?'Yeni qeydlər dayandırılıb — yenilədikdə bərpa olunacaq.':'Məhdudiyyətsiz işləmək üçün girişi yeniləyin.'),btn:'💳 Abunəliyi yenilə'},
+ uz:{d3:s=>`⏳ <b>Takt kirishi 3 kundan keyin tugaydi</b>\n\nTugash sanasi: <b>${s}</b>.\nOldindan uzaytiring — mijoz yozuvlari to‘xtamaydi.`,last:s=>`⏰ <b>Takt kirishining oxirgi kuni</b>\n\nKirish <b>${s}</b> da tugaydi.\nYangi yozuvlar to‘xtab qolmasligi uchun hozir uzaytiring.`,end:(s,on)=>`⏰ <b>Takt kirish muddati tugadi</b> (${s}).\nMa’lumotlar va mijozlar saqlangan, mijozlar bepul foydalanadi.\n`+(on?'Yangi yozuvlar to‘xtatilgan — uzaytirsangiz, tiklanadi.':'Cheklovsiz ishlash uchun kirishni uzaytiring.'),btn:'💳 Obunani uzaytirish'}
 };
-export const noticeKind=(end,t=now())=>{const left=end-t;if(left<=0)return t-end<=86400?0:null;if(left<=86400)return 1;if(left<=3*86400)return 3;if(left<=7*86400)return 7;return null};
+// kind: 3 = 3 days before, 1 = last 24 hours, 0 = just ended (once, within a day after the end)
+export const noticeKind=(end,t=now())=>{const left=end-t;if(left<=0)return t-end<=86400?0:null;if(left<=86400)return 1;if(left<=3*86400)return 3;return null};
+export const subscriptionUrl=base=>{const u=new URL(base);u.searchParams.set('view','subscription');return u.href};
 export async function subscriptionNotices(env,db,{budget=40}={}){
- await ensure140b(db);const t=now(),base=env.APP_URL||'https://takt.taktapp.workers.dev';let queued=0;
- const subs=(await db.prepare('SELECT s.*,o.data options FROM subscriptions s JOIN companies c ON c.id=s.company_id AND c.active=1 LEFT JOIN specialist_options o ON o.company_id=s.company_id WHERE MAX(COALESCE(s.paid_until,0),s.trial_ends_at) BETWEEN ? AND ?').bind(t-86400,t+7*86400).all()).results;
+ await ensure140b(db);const t=now(),base=env.APP_URL||'https://takt.taktapp.workers.dev',url=subscriptionUrl(base);let queued=0;
+ const enforce=(await db.prepare("SELECT value FROM service_config WHERE key='billing_enforce'").first())?.value==='1';
+ const subs=(await db.prepare('SELECT s.*,o.data options FROM subscriptions s JOIN companies c ON c.id=s.company_id AND c.active=1 LEFT JOIN specialist_options o ON o.company_id=s.company_id WHERE MAX(COALESCE(s.paid_until,0),s.trial_ends_at) BETWEEN ? AND ?').bind(t-86400,t+3*86400).all()).results;
  for(const s of subs){if(queued>=budget)break;const end=Math.max(Number(s.paid_until||0),Number(s.trial_ends_at||0)),kind=noticeKind(end,t);if(kind===null)continue;
   const fresh=await db.prepare('INSERT OR IGNORE INTO subscription_notices(company_id,kind,period_end,created_at) VALUES(?,?,?,?)').bind(s.company_id,kind,end,t).run();if(!fresh.meta.changes)continue;
   let tz=defaults.timezone;try{tz=JSON.parse(s.options||'{}').timezone||tz}catch{}
-  const when=quietUntil(t,tz),members=(await db.prepare('SELECT user_id FROM memberships WHERE company_id=?').bind(s.company_id).all()).results;
-  for(const m of members){const lang=(await db.prepare('SELECT language FROM user_app_settings WHERE user_id=?').bind(String(m.user_id)).first())?.language||'ru',L=NOTICE[lang]||NOTICE.ru,days=kind===1?1:kind;
-   const payload={text:kind===0?L.zero:L.n(days),reply_markup:{inline_keyboard:[[{text:L.btn,web_app:{url:base}}]]}};
+  // Quiet hours apply, but a last-day notice must never be pushed past the moment access ends.
+  let when=quietUntil(t,tz);if(kind===1&&when>=end-1800)when=t;
+  const members=(await db.prepare('SELECT user_id FROM memberships WHERE company_id=?').bind(s.company_id).all()).results;
+  for(const m of members){const lang=(await db.prepare('SELECT language FROM user_app_settings WHERE user_id=?').bind(String(m.user_id)).first())?.language||'ru',L=NOTICE[lang]||NOTICE.ru,stamp=endStamp(end,tz,NOTICE[lang]?lang:'ru');
+   const text=kind===0?L.end(stamp,enforce):kind===1?L.last(stamp):L.d3(stamp);
+   const payload={text,parse_mode:'HTML',takt_sub:{company:s.company_id,end},reply_markup:{inline_keyboard:[[{text:L.btn,style:'success',web_app:{url}}]]}};
    await db.prepare('INSERT OR IGNORE INTO outbox(id,chat_id,text,created_at,lease_until) VALUES(?,?,?,?,?)').bind(`subend:${s.company_id}:${kind}:${end}:${m.user_id}`,String(m.user_id),JSON.stringify(payload),t,when>t?when:0).run();queued++}}
  return {queued};
 }

@@ -102,21 +102,22 @@ export async function waitlistTick(env,db,{company,enrichService,availableSlots,
   if(!free)continue;
   const upd=await db.prepare("UPDATE waitlist SET status='notified',notified_at=? WHERE id=? AND status='waiting'").bind(t,w.id).run();if(!upd.meta.changes)continue;
   const sv=await db.prepare('SELECT name FROM services WHERE id=?').bind(w.service_id).first(),L=COPY[await langOf(db,w.user_id)]||COPY.ru;
-  await queueMsg(db,`waitlist:${w.id}`,w.user_id,L.wl(sv?.name||'',w.date),env.APP_URL||'https://takt.taktapp.workers.dev',quietUntil(t,'Asia/Almaty'));sent++}catch{}}
+  await queueMsg(db,`waitlist:${w.id}`,w.user_id,L.wl(sv?.name||'',w.date),env.APP_URL||'https://takt.taktapp.workers.dev',quietUntil(t,(await company(db,w.company_id))?.timezone||'Asia/Almaty'));sent++}catch{}}
  return {sent}}
 // ---------- «пора записаться снова» ----------
 export async function rebookTick(env,db,{quietUntil=x=>x}={},{budget=30}={}){
  const t=now(),base=env.APP_URL||'https://takt.taktapp.workers.dev';
  const rows=(await db.prepare(`SELECT b.company_id,b.user_id,
- SUM(CASE WHEN b.starts_at<=? AND b.status IN ('done','confirmed') AND COALESCE(o.outcome,'done')='done' THEN 1 ELSE 0 END) n,
- MIN(CASE WHEN b.starts_at<=? AND b.status IN ('done','confirmed') AND COALESCE(o.outcome,'done')='done' THEN b.starts_at END) f,
- MAX(CASE WHEN b.starts_at<=? AND b.status IN ('done','confirmed') AND COALESCE(o.outcome,'done')='done' THEN b.starts_at END) l,
- SUM(CASE WHEN b.starts_at>? AND b.status IN ('pending','confirmed') THEN 1 ELSE 0 END) fut,MAX(c.name) cname
- FROM bookings b JOIN companies c ON c.id=b.company_id AND c.active=1 LEFT JOIN booking_outcomes o ON o.booking_id=b.id WHERE b.starts_at>? AND b.user_id GLOB '[0-9]*' AND b.user_id NOT LIKE 'manual-%' GROUP BY b.company_id,b.user_id HAVING n>=2 AND fut=0 LIMIT 500`).bind(t,t,t,t,t-400*D).all()).results;let sent=0;
+ SUM(CASE WHEN b.starts_at<=? AND b.status='done' AND COALESCE(o.outcome,'done')='done' THEN 1 ELSE 0 END) n,
+ MIN(CASE WHEN b.starts_at<=? AND b.status='done' AND COALESCE(o.outcome,'done')='done' THEN b.starts_at END) f,
+ MAX(CASE WHEN b.starts_at<=? AND b.status='done' AND COALESCE(o.outcome,'done')='done' THEN b.starts_at END) l,
+ SUM(CASE WHEN b.starts_at>? AND b.status IN ('pending','confirmed') THEN 1 ELSE 0 END) fut,MAX(CASE WHEN b.starts_at<=? AND o.outcome='no_show' THEN b.starts_at END) ns,MAX(c.name) cname,MAX(json_extract(so.data,'$.timezone')) tz
+ FROM bookings b JOIN companies c ON c.id=b.company_id AND c.active=1 LEFT JOIN booking_outcomes o ON o.booking_id=b.id LEFT JOIN specialist_options so ON so.company_id=b.company_id WHERE b.starts_at>? AND b.user_id GLOB '[0-9]*' AND b.user_id NOT LIKE 'manual-%' GROUP BY b.company_id,b.user_id HAVING n>=2 AND fut=0 LIMIT 500`).bind(t,t,t,t,t,t-400*D).all()).results;let sent=0;
  for(const r of rows){if(sent>=budget)break;const avg=(r.l-r.f)/(r.n-1),since=t-r.l;if(!(since>=avg*1.2&&since<=avg*3&&avg>=3*D))continue;
+  if(r.ns&&r.ns>=r.l)continue; // последний визит — неявка: не зовём «записаться снова»
   if(await isBlockedClient(db,r.company_id,r.user_id))continue;
   const fresh=await db.prepare('INSERT OR IGNORE INTO rebook_notices(company_id,user_id,last_visit,created_at) VALUES(?,?,?,?)').bind(r.company_id,r.user_id,r.l,t).run();if(!fresh.meta.changes)continue;
-  const L=COPY[await langOf(db,r.user_id)]||COPY.ru;await queueMsg(db,`rebook:${r.company_id}:${r.user_id}:${r.l}`,r.user_id,L.rebook(r.cname),base,quietUntil(t,'Asia/Almaty'));sent++}
+  const L=COPY[await langOf(db,r.user_id)]||COPY.ru;await queueMsg(db,`rebook:${r.company_id}:${r.user_id}:${r.l}`,r.user_id,L.rebook(r.cname),base,quietUntil(t,r.tz||'Asia/Almaty'));sent++}
  return {sent}}
 // ---------- HTTP ----------
 const ERR={unknown:'Клиент не найден',birthday:'Формат дня рождения: ММ-ДД',empty:'Заполните поле',missing:'Не найдено',limit:'Достигнут лимит',format:'Фото должно быть JPEG до 150 КБ',unreachable:'Клиент не писал боту — сообщение отправить нельзя',blocked:'Клиент в чёрном списке',recent:'Этому клиенту уже писали на этой неделе',date:'Выберите дату в ближайшие 60 дней',forbidden:'Нет доступа к специалисту',service:'Услуга недоступна'};
