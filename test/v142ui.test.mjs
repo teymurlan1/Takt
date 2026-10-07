@@ -14,6 +14,6 @@ test('14.2 UI: экран инструментов — все разделы, э
  assert.equal(esc('<&">'),'&lt;&amp;&quot;&gt;')});
 test('14.2 UI: подключение — страница, ссылка в профиле, лист ожидания, подвал',()=>{
  const a=fs.readFileSync('public/app-v2.js','utf8');for(const n of ['tools:toolsPage','data-tools140','data-tools-link','data-gallery140','data-foot140','booking:()=>booking'])assert.ok(a.includes(n),n);
- assert.ok(fs.readFileSync('public/index.html','utf8').includes('tools140.js?v=140'));
+ assert.ok(fs.readFileSync('public/index.html','utf8').includes('tools140.js?v=151'));
  const t=fs.readFileSync('public/tools140.js','utf8');assert.ok(t.includes('/v140/waitlist')&&t.includes('portfolio_add')&&t.includes('createImageBitmap'));
  const css=fs.readFileSync('public/takt-v140.css','utf8');assert.ok(css.includes('.t140x')&&css.includes('data-theme=dark')&&css.includes('prefers-reduced-motion'))});

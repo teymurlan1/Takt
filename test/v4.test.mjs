@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {database} from '../scripts/db.mjs';
 import worker,{deliver} from '../src/worker.js';
 import {localDate,dateShift,fromLocal} from '../src/v3.js';
+import {freezeClock} from '../scripts/fake-clock.mjs';
 async function setup(extra={}){
  const DB=database();DB.sqlite.exec(readFileSync(new URL('../migrations/0001_initial.sql',import.meta.url),'utf8'));DB.sqlite.exec("INSERT INTO memberships VALUES('nail','9002')");
  const env={DB,DEV_MODE:'true',BOT_TOKEN:'test-only',APP_URL:'https://example.com'};
@@ -27,9 +28,10 @@ test('manual booking preserves a known client identity and rejects unknown tenan
  assert.equal((await t.req('/bookings','GET',null,'client')).data.length,2);
 });
 test('master one-hour reminder is optional, unique and invalidated by cancellation',async()=>{
- const t=await setup({notifications:{master_reminder:true}}),at=Math.ceil((Date.now()/1000+1200)/900)*900;const b=await t.book(at);assert.equal(b.status,201);
+ const restoreClock=freezeClock();try{const t=await setup({notifications:{master_reminder:true}}),at=Math.ceil((Date.now()/1000+1200)/900)*900;const b=await t.book(at);assert.equal(b.status,201);
  t.DB.sqlite.prepare('UPDATE bookings SET created_at=? WHERE id=?').run(at-86401,b.data.id);const original=fetch,calls=[];globalThis.fetch=async(u,o)=>{calls.push(JSON.parse(o.body));return Response.json({ok:true})};
  try{await deliver(t.env);await deliver(t.env);const reminders=calls.filter(x=>x.text.includes('Скоро следующий клиент'));assert.equal(reminders.length,1);assert.equal(reminders[0].chat_id,'9002');assert.equal(calls.filter(x=>x.text.includes('Напоминаем о записи')).length,1);await t.req('/bookings/'+b.data.id,'PATCH',{status:'cancelled'},'client');await deliver(t.env);assert.equal(calls.filter(x=>x.text.includes('Скоро следующий клиент')).length,1)}finally{globalThis.fetch=original}
+ }finally{restoreClock()}
 });
 test('ambiguous Telegram timeout is not resent, explicit rate limit is retried',async()=>{
  const t=await setup(),original=fetch;let calls=0;

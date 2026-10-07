@@ -10,8 +10,8 @@ test('14.1: состояния подписки — активна, пробны
  assert.equal(subscriptionState({trial_ends_at:t-9*D,paid_until:t+D},t).state,'active');
  const g=subscriptionState({trial_ends_at:t-D,paid_until:null},t);assert.equal(g.state,'grace');assert.equal(g.new_bookings_paused,true);
  assert.equal(subscriptionState({trial_ends_at:t-(GRACE_DAYS+1)*D,paid_until:null},t).state,'expired');assert.equal(subscriptionState(null,t).state,'none')});
-test('14.1: окна напоминаний 3 дня / последний день / окончание',()=>{const t=1e9;
- assert.equal(noticeKind(t+8*D,t),null);assert.equal(noticeKind(t+7*D,t),null);assert.equal(noticeKind(t+5*D,t),null);assert.equal(noticeKind(t+3*D,t),3);assert.equal(noticeKind(t+2*D,t),3);assert.equal(noticeKind(t+D,t),1);assert.equal(noticeKind(t+3600,t),1);assert.equal(noticeKind(t-3600,t),0);assert.equal(noticeKind(t-2*D,t),null)});
+test('14.1: окна напоминаний 7/3/1/день окончания',()=>{const t=1e9;
+ assert.equal(noticeKind(t+8*D,t),null);assert.equal(noticeKind(t+7*D,t),7);assert.equal(noticeKind(t+5*D,t),7);assert.equal(noticeKind(t+3*D,t),3);assert.equal(noticeKind(t+2*D,t),3);assert.equal(noticeKind(t+D,t),1);assert.equal(noticeKind(t+3600,t),1);assert.equal(noticeKind(t-3600,t),0);assert.equal(noticeKind(t-2*D,t),null)});
 test('14.1: тихие часы переносят на 09:00 по поясу получателя',()=>{
  const night=Date.parse('2026-10-06T19:30:00Z')/1000; // 00:30 в Asia/Almaty (UTC+5)
  const q=quietUntil(night,'Asia/Almaty');assert.ok(q>night&&q-night<=9*3600);assert.equal(new Date(q*1000).toISOString(),'2026-10-07T04:00:00.000Z');
@@ -36,7 +36,7 @@ test('14.1: ручное продление админом идемпотент�
 test('14.1: напоминание об окончании ставится один раз на получателя',async()=>{const DB=await setup();sub(DB,'nail',T()+2*D);
  DB.sqlite.prepare("INSERT INTO memberships(company_id,user_id) VALUES('nail','7001')").run();
  await subscriptionNotices({APP_URL:'https://example.com'},DB);await subscriptionNotices({APP_URL:'https://example.com'},DB);
- const rows=DB.sqlite.prepare("SELECT id,text FROM outbox WHERE id LIKE 'subend:%'").all();assert.equal(rows.length,1);assert.match(rows[0].id,/^subend:nail:3:/);assert.match(JSON.parse(rows[0].text).text,/через 3 дня/)});
+ const rows=DB.sqlite.prepare("SELECT id,text FROM outbox WHERE id LIKE 'subend:%'").all();assert.equal(rows.length,1);assert.match(rows[0].id,/^subend:nail:3:/);assert.match(JSON.parse(rows[0].text).text,/дн\./)});
 test('14.1: блокировка новых записей после окончания включается флагом и по умолчанию выключена',async()=>{const DB=await setup();sub(DB,'nail',T()-5*D);
  await specialistAvailable(DB,'nail');
  DB.sqlite.prepare("INSERT INTO service_config(key,value,updated_at,updated_by) VALUES('billing_enforce','1',1,'t')").run();

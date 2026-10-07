@@ -27,10 +27,10 @@ test('14.2: лист ожидания — вход, лимиты, одно ув�
  assert.equal((await waitlistTick({APP_URL:'https://x'},DB,deps)).sent,1);assert.equal((await waitlistTick({APP_URL:'https://x'},DB,deps)).sent,0);
  const row=DB.sqlite.prepare("SELECT id,chat_id,text FROM outbox WHERE id LIKE 'waitlist:%'").get();assert.equal(row.chat_id,'7001');assert.match(JSON.parse(row.text).text,/Освободилось время/);
  assert.equal(DB.sqlite.prepare('SELECT status FROM waitlist').get().status,'notified')});
-test('14.2: «пора записаться снова» — один раз на последний визит',async()=>{const DB=await setup();const bk=(DB,u,d)=>book(DB,u,d,{status:'done'});bk(DB,'7001',-100);bk(DB,'7001',-70);bk(DB,'7001',-40);
+test('14.2: «пора записаться снова» — один раз на последний визит',async()=>{const DB=await setup();book(DB,'7001',-100);book(DB,'7001',-70);book(DB,'7001',-40);
  assert.equal((await rebookTick({APP_URL:'https://x'},DB)).sent,1);assert.equal((await rebookTick({APP_URL:'https://x'},DB)).sent,0);
  assert.match(JSON.parse(DB.sqlite.prepare("SELECT text FROM outbox WHERE id LIKE 'rebook:%'").get().text).text,/Пора записаться снова/);
- bk(DB,'7002',-100);bk(DB,'7002',-70);bk(DB,'7002',-40);book(DB,'7002',3);assert.equal((await rebookTick({APP_URL:'https://x'},DB)).sent,0)});
+ book(DB,'7002',-100);book(DB,'7002',-70);book(DB,'7002',-40);book(DB,'7002',3);assert.equal((await rebookTick({APP_URL:'https://x'},DB)).sent,0)});
 test('14.2: портфолио — формат, лимит 20 по умолчанию, до 30 по настройке',async()=>{const DB=await setup();const ok='data:image/jpeg;base64,'+'A'.repeat(100);
  assert.equal((await addPhoto(DB,'nail','data:image/png;base64,AAA')).reason,'format');assert.equal((await addPhoto(DB,'nail','data:image/jpeg;base64,'+'A'.repeat(150001))).reason,'format');
  for(let i=0;i<PORTFOLIO_DEFAULT;i++)assert.equal((await addPhoto(DB,'nail',ok)).ok,true);assert.equal((await addPhoto(DB,'nail',ok)).reason,'limit');

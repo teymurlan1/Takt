@@ -12,7 +12,7 @@ test('14.0 UI: карточка подписки для всех состоян�
  assert.ok(!/s140-note/.test(view({...base,state:'active'},'ru')));
  assert.match(view({...base,state:'trial',payments:[]},'az'),/Hələ ödəniş yoxdur/)});
 test('14.0 UI: подключение файлов, мост и админ-разделы',()=>{
- const h=fs.readFileSync('public/index.html','utf8');assert.ok(h.includes('takt-v140.css?v=140')&&h.includes('v140.js?v=140'));
+ const h=fs.readFileSync('public/index.html','utf8');assert.ok(h.includes('takt-v140.css?v=151')&&h.includes('v140.js?v=151'));
  const a=fs.readFileSync('public/app-v2.js','utf8');assert.ok(a.includes('window.Takt140=')&&a.includes('data-sub140'));assert.ok(!a.includes('id="renew-subscription"')||!a.includes('Период продления'));
  const c=fs.readFileSync('public/control-center.js','utf8');assert.ok(c.includes("key==='undelivered'")&&c.includes('/v140/admin/tickets')&&c.includes('data-t140-reply'));
  const css=fs.readFileSync('public/takt-v140.css','utf8');assert.ok(css.includes('prefers-reduced-motion')&&css.includes('data-theme=dark')&&/min-height:40px/.test(css))});

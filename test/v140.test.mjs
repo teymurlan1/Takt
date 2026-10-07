@@ -33,9 +33,9 @@ test('14.0: лимит обращений в час и язык пользова
  assert.match(t.sent('sendMessage',600).pop().payload.text,/həddindən çox/);
 }finally{t.restore()}});
 test('14.0: старая веб-форма отключена, версия и миграция на месте',async()=>{
- const r=await worker.fetch(new Request('http://localhost/api/health'),{DB:database()});assert.equal((await r.json()).version,'14.0.0');
+ const r=await worker.fetch(new Request('http://localhost/api/health'),{DB:database()});assert.equal((await r.json()).version,'15.1.1');
  assert.match(fs.readFileSync('migrations/0013_takt_v140.sql','utf8'),/support_tickets/);
  assert.ok(!/CREATE TABLE(?! IF NOT EXISTS)/.test(fs.readFileSync('migrations/0013_takt_v140.sql','utf8')));
- assert.ok(JSON.parse(fs.readFileSync('package.json','utf8')).version==='14.0.0');
+ assert.ok(JSON.parse(fs.readFileSync('package.json','utf8')).version==='15.1.1');
  assert.ok(fs.readFileSync('public/app-v2.js','utf8').includes('?start=support'));
 });
