@@ -1,0 +1,57 @@
+/* Takt 14.4 — компактные пустые состояния, услуги без фото, аккуратный список услуг клиента.
+   Подключается последним и использует токены тем (светлая/тёмная), поэтому не ломает тёмную тему. */
+
+/* ---- пустые состояния: небольшая строка вместо огромной карточки ---- */
+html body .empty-state,html body .empty:not(.next72){
+ display:grid!important;grid-template-columns:40px minmax(0,1fr)!important;align-items:center!important;justify-items:stretch!important;align-content:center!important;
+ gap:4px 12px!important;min-height:0!important;padding:14px 16px!important;margin:8px 0!important;text-align:left!important;
+ background:var(--takt-surface,#fff)!important;border:1px solid var(--takt-line,#e4e8f1)!important;border-radius:16px!important;box-shadow:none!important}
+html body .empty-state>*,html body .empty>*{max-width:none!important}
+html body .empty-state .empty-ic{grid-row:1;grid-column:1;display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:var(--t12-blue-soft,#edf2ff);color:var(--takt-blue,#2a51df)}
+html body .empty-state .empty-ic svg{width:20px;height:20px;margin:0!important}
+html body .empty-state .empty-copy{grid-row:1;grid-column:2;min-width:0}
+html body .empty-state h3{margin:0!important;font-size:15px!important;line-height:1.3!important;letter-spacing:0!important;color:var(--takt-ink,#17243a)!important}
+html body .empty-state p{margin:2px 0 0!important;font-size:13px!important;line-height:1.45!important;color:var(--takt-muted,#64748b)!important}
+html body .empty-state>button,html body .empty-state>a{grid-column:1/-1!important;grid-row:2;justify-self:stretch!important;margin-top:8px!important;min-height:42px}
+@media(min-width:640px){
+ html body .empty-state:has(>button,>a){grid-template-columns:40px minmax(0,1fr) auto!important}
+ html body .empty-state>button,html body .empty-state>a{grid-column:3!important;grid-row:1!important;justify-self:end!important;margin-top:0!important}
+}
+/* пустой «Ближайшие записи» на главной: тонкая полоса, а не синяя плита */
+html body .next72.empty{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;justify-items:start!important;text-align:left!important;gap:10px 14px!important;min-height:0!important;padding:16px!important;border-radius:18px!important}
+html body .next72.empty>div:first-child{text-align:left!important;justify-items:start!important}
+html body .next72.empty h2{margin:2px 0 0!important;font-size:18px!important}
+html body .next72.empty p{margin:2px 0 0!important;font-size:13px!important}
+html body .next72.empty .eyebrow{font-size:10px!important;opacity:.85}
+html body .next72-empty-actions{margin:0!important}
+html body .next72.empty .next72-message{min-height:40px;padding:0 14px;white-space:nowrap}
+@media(max-width:420px){html body .next72.empty{grid-template-columns:1fr!important}html body .next72.empty .next72-message{width:100%}}
+/* пустой «на сегодня» */
+html body .dashboard-empty{display:block!important;padding:12px 16px!important;margin:6px 0!important;border-radius:16px!important}
+html body .dashboard-empty h3{margin:0!important;font-size:15px!important}
+html body .dashboard-empty p{margin:2px 0 0!important;font-size:13px!important;line-height:1.45!important;color:var(--takt-muted,#64748b)!important}
+html body .calendar-day-empty{padding:12px 14px!important;min-height:0!important}
+
+/* ---- услуги специалиста: без фото — без серой плиты ---- */
+html body .service-card.no-photo{padding-top:16px}
+html body .service-card .service-media{max-height:160px;overflow:hidden;border-radius:14px}
+html body .service-card .service-media img{width:100%;height:160px;object-fit:cover;display:block}
+html body .service-card .service-visibility{align-self:flex-start;width:auto!important;display:inline-block!important;padding:3px 10px!important;font-size:11px!important}
+html body .service-card h2{margin:6px 0 2px!important;font-size:18px!important}
+html body .service-card p{margin:4px 0 10px!important;font-size:13px!important;line-height:1.45!important}
+
+/* ---- услуги в клиентской странице: название и цена не сжимаются ---- */
+html body .client-service.premium-service{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;gap:8px 14px!important;padding:14px 16px!important;min-height:0!important}
+html body .client-service.premium-service .service-media{grid-column:1/-1!important;width:100%!important;height:150px!important;border-radius:14px;overflow:hidden}
+html body .client-service.premium-service .service-media img{width:100%;height:100%;object-fit:cover;display:block}
+html body .client-service.premium-service .service-copy{grid-column:1!important;min-width:0;display:grid;gap:4px}
+html body .client-service.premium-service .service-copy h3{margin:0!important;font-size:16px!important;line-height:1.3!important}
+html body .client-service.premium-service .service-copy p{margin:0!important;font-size:13px!important;line-height:1.45!important;color:var(--takt-muted,#64748b)}
+html body .client-service.premium-service .service-meta{display:flex!important;flex-wrap:wrap;gap:2px 10px;align-items:baseline;white-space:nowrap}
+html body .client-service.premium-service .service-meta span{font-size:13px;color:var(--takt-muted,#64748b)}
+html body .client-service.premium-service .service-meta strong{font-size:15px}
+html body .client-service.premium-service>button{grid-column:2!important;width:auto!important;min-width:112px;min-height:42px;padding:0 16px;white-space:nowrap}
+@media(max-width:360px){html body .client-service.premium-service{grid-template-columns:1fr!important}html body .client-service.premium-service>button{grid-column:1!important;width:100%!important}}
+html body .client-service.premium-service .service-copy h3,html body .client-service.premium-service .service-copy h3 span{color:var(--takt-ink,#17243a)!important;font-size:16px!important;font-weight:750!important;letter-spacing:0!important;word-spacing:normal!important;line-height:1.3!important}
+html body .empty-state,html body .empty:not(.next72),html body .dashboard-empty{grid-column:1/-1!important;width:100%!important;max-width:none!important;box-sizing:border-box}
+@media(min-width:900px){html body .empty-state{max-width:760px!important}}
