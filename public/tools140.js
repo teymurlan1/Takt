@@ -1,5 +1,5 @@
 /* Takt 14.0: «Инструменты» (чеклист, клиенты, шаблоны, отзывы, портфолио, экспорт), лист ожидания, галерея, подвал. */
-import {tt} from './tools-copy140.js?v=140';
+import {tt} from './tools-copy140.js?v=151';
 export const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const T=()=>window.Takt140,stars=n=>'★'.repeat(n)+'☆'.repeat(5-n);
 const IMG=/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/;

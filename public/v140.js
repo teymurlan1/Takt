@@ -1,5 +1,5 @@
 /* Takt 14.0: экран подписки (срок, что входит, что после окончания, реферал, история) и поддержка через бота. */
-import {tr} from './copy140.js?v=140';
+import {tr} from './copy140.js?v=151';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const LOCALE={ru:'ru-RU',kk:'kk-KZ',az:'az-AZ',uz:'uz-UZ'};
 const date=(t,l)=>{try{return new Date(t*1000).toLocaleDateString(LOCALE[l]||'ru-RU',{day:'numeric',month:'long',year:'numeric'})}catch{return ''}};

@@ -1,0 +1,26 @@
+/* Takt 15.0: карточка ближайшей записи, «Требует внимания», настройки клиента, звёзды отзыва. */
+.hero150{margin:0 0 10px}
+.hero150-card{display:grid;gap:6px;padding:14px;border-radius:18px;color:#fff;background:linear-gradient(135deg,var(--blue,#2a51df),#5b7cff);box-shadow:0 8px 22px rgba(42,81,223,.22);animation:h150-in .3s ease both}
+.hero150-label{font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;opacity:.85}
+.hero150-time{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.hero150-time strong{font-size:34px;line-height:1;font-weight:800}.hero150-time span{font-size:13px;opacity:.92}.hero150-time b{margin-left:auto;font-size:12px;padding:3px 9px;border-radius:99px;background:rgba(255,255,255,.2)}
+.hero150-card h3{margin:2px 0 0;font-size:15px}.hero150-card p{margin:0;font-size:12.5px;opacity:.9}
+.hero150-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.hero150-actions a,.hero150-actions button{min-height:40px;display:inline-flex;align-items:center;justify-content:center;padding:0 12px;border-radius:12px;font-size:13px;font-weight:600;text-decoration:none;border:0;background:rgba(255,255,255,.18);color:#fff}
+.hero150-actions .primary{background:#fff;color:var(--blue,#2a51df)}
+.dash150{display:grid;gap:6px;margin:0 0 10px;padding:10px 12px;border:1px solid var(--line,#e4e8f1);border-radius:14px;background:var(--card,#fff)}.dash150:empty{display:none}
+.dash150 h3{margin:0;font-size:13px}.dash150 p{margin:0;font-size:12.5px}
+.dash150-chips{display:flex;flex-wrap:wrap;gap:6px}.dash150-chip{min-height:40px;padding:0 12px;border-radius:99px;border:1px solid var(--line,#e4e8f1);background:var(--soft,#eef2ff);font-size:12.5px}
+.dash150-chip.warn{background:#fff3d6;border-color:#f3dc9a}.dash150-chip.bad{background:#fdecec;border-color:#f3c0c0}.dash150-chip.info{background:#e7efff;border-color:#c9d8ff}
+.prefs150 h3{margin:0 0 6px;font-size:13px}.prefs150-row{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:44px;font-size:13px;border-bottom:1px solid var(--line,#e4e8f1)}.prefs150-row:last-of-type{border-bottom:0}.prefs150-row input{width:44px;height:26px;accent-color:var(--blue,#2a51df)}
+/* звёзды отзыва: крупные нажимаемые, подсветка слева направо */
+.rating-field{display:flex!important;flex-direction:row-reverse;justify-content:center;gap:2px;border:0;padding:0}
+.rating-field legend{width:100%;text-align:center;float:left;margin-bottom:6px}
+.rating-field label{position:relative;display:inline-flex;min-width:44px;min-height:44px;align-items:center;justify-content:center;cursor:pointer}
+.rating-field input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.rating-field span{font-size:34px;line-height:1;color:#c7cedd;transition:color .12s ease,transform .12s ease;padding:0!important;background:none!important;border:0!important}
+.rating-field label:hover span,.rating-field label:hover~label span,.rating-field label:has(input:checked) span,.rating-field label:has(input:checked)~label span{color:#f5b301}
+.rating-field label:has(input:focus-visible) span{outline:2px solid var(--blue,#2a51df);outline-offset:2px;border-radius:8px}
+.rating-field label:active span{transform:scale(1.15)}
+html[data-theme=dark] .dash150{background:#141c2e;border-color:#26324a}html[data-theme=dark] .dash150-chip{background:#1d2a47;border-color:#2b3a5c}html[data-theme=dark] .prefs150-row{border-color:#26324a}
+@keyframes h150-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.hero150-card{animation:none}.rating-field span{transition:none}}

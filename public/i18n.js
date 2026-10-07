@@ -1,6 +1,6 @@
-import {copy12} from './copy-v12.js?v=120';
-import {copy10} from './copy-v10.js?v=120';
-import {AZ} from './az132.js';
+import {copy12} from './copy-v12.js?v=151';
+import {copy10} from './copy-v10.js?v=151';
+import {AZ} from './az132.js?v=151';
 const AZK=Object.keys(AZ).filter(k=>k.length>=7).sort((a,b)=>b.length-a.length);
 export function azText(text,exactOnly=false){const core=String(text??'').trim();if(!core)return text;if(AZ[core])return String(text).replace(core,AZ[core]);if(exactOnly)return text;let out=String(text);for(const k of AZK)if(out.includes(k))out=out.replaceAll(k,AZ[k]);return out}
 export const LANGUAGES=[['ru','🇷🇺','Русский'],['kk','🇰🇿','Қазақша'],['az','🇦🇿','Azərbaycan dili'],['uz','🇺🇿','O‘zbekcha']];

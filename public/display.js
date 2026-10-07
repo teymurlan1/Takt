@@ -1,4 +1,4 @@
-import {translateText} from './i18n.js?v=120';
+import {translateText} from './i18n.js?v=151';
 let tg,notify,unsupported=false,manual=false;
 const MODE_KEY='takt:display-mode';
 const native=()=>!!tg?.initData;
