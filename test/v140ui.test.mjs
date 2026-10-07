@@ -16,3 +16,5 @@ test('14.0 UI: подключение файлов, мост и админ-ра�
  const a=fs.readFileSync('public/app-v2.js','utf8');assert.ok(a.includes('window.Takt140=')&&a.includes('data-sub140'));assert.ok(!a.includes('id="renew-subscription"')||!a.includes('Период продления'));
  const c=fs.readFileSync('public/control-center.js','utf8');assert.ok(c.includes("key==='undelivered'")&&c.includes('/v140/admin/tickets')&&c.includes('data-t140-reply'));
  const css=fs.readFileSync('public/takt-v140.css','utf8');assert.ok(css.includes('prefers-reduced-motion')&&css.includes('data-theme=dark')&&/min-height:40px/.test(css))});
+test('14.3 UI: раздел «Бот» в админке и тексты на 4 языках',()=>{const c=fs.readFileSync('public/control-center.js','utf8');for(const n of ["key==='bot'",'/v140/admin/bot-texts','data-bot-form','data-bot-rollback','data-bot-preview'])assert.ok(c.includes(n),n);
+ for(const l of ['ru','kk','az','uz']){assert.ok(COPY[l].nav_bot&&COPY[l].bot.h&&COPY[l].bot.keys.support_ask);assert.equal(keys(COPY[l].bot),keys(COPY.ru.bot));assert.equal(keys(COPY[l].bot.keys),keys(COPY.ru.bot.keys))}});
