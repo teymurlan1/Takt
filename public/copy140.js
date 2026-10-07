@@ -11,7 +11,7 @@ ru:{
  hist_h:'История платежей',hist_empty:'Платежей пока нет',days:n=>`${n} дн.`,
  pay_status:{manual:'Продление поддержкой',paid:'Оплачено',bonus:'Бонус',pending:'Ожидает',failed:'Ошибка',refunded:'Возврат'},
  err:'Не удалось загрузить данные подписки',retry:'Повторить',
- nav_support:'Поддержка',nav_undelivered:'Не доставлено',
+ nav_support:'Поддержка',nav_undelivered:'Не доставлено',nav_bot:'Бот',bot:{h:'Тексты бота',note:'Разрешены только парные теги <b> и <i>. Пустой текст возвращает стандартный.',keys:{help_specialist:'/help для специалиста',help_client:'/help для клиента',welcome_first:'Первое приветствие',support_ask:'Приглашение в поддержку'},def:'Стандартный текст',ver:v=>v?`Версия ${v}`:'Стандартный',preview:'Предпросмотр',save:'Сохранить',rollback:'Откат',saved:'Сохранено',lang:'Язык'},
  t_status:{new:'Новое',in_progress:'В работе',closed:'Закрыто'},t_role:{specialist:'Специалист',client:'Клиент'},t_reply_ph:'Ответ пользователю',t_send:'Ответить',t_work:'В работу',t_close:'Закрыть',t_sent:'Ответ отправлен',t_not_delivered:'Ответ сохранён, но не доставлен',t_empty:'Обращений пока нет',t_all:'Все',t_ticket:'Обращение',t_saved:'Сохранено',
  u_note:'Показаны сообщения за 7 дней, которые не дошли до получателя. Текст сообщений не показывается.',u_empty:'Недоставленных сообщений нет',u_attempts:'попыток',
  u_reason:{blocked:'Пользователь заблокировал бота',failed:'Telegram отклонил сообщение',unknown:'Исход неясен, повтор не делается',retry:'Ждёт повторной попытки',sending:'Отправляется',pending:'Ожидает отправки'}
@@ -27,7 +27,7 @@ kk:{
  hist_h:'Төлем тарихы',hist_empty:'Төлемдер әзірге жоқ',days:n=>`${n} күн`,
  pay_status:{manual:'Қолдау ұзартты',paid:'Төленді',bonus:'Бонус',pending:'Күтуде',failed:'Қате',refunded:'Қайтарылды'},
  err:'Жазылым деректерін жүктеу мүмкін болмады',retry:'Қайталау',
- nav_support:'Қолдау',nav_undelivered:'Жеткізілмеді',
+ nav_support:'Қолдау',nav_undelivered:'Жеткізілмеді',nav_bot:'Бот',bot:{h:'Бот мәтіндері',note:'Тек жұптасқан <b> және <i> тегтеріне рұқсат. Бос мәтін стандартты мәтінді қайтарады.',keys:{help_specialist:'Маманға арналған /help',help_client:'Клиентке арналған /help',welcome_first:'Алғашқы сәлемдесу',support_ask:'Қолдауға шақыру'},def:'Стандартты мәтін',ver:v=>v?`${v}-нұсқа`:'Стандартты',preview:'Алдын ала қарау',save:'Сақтау',rollback:'Кері қайтару',saved:'Сақталды',lang:'Тіл'},
  t_status:{new:'Жаңа',in_progress:'Жұмыста',closed:'Жабылды'},t_role:{specialist:'Маман',client:'Клиент'},t_reply_ph:'Пайдаланушыға жауап',t_send:'Жауап беру',t_work:'Жұмысқа',t_close:'Жабу',t_sent:'Жауап жіберілді',t_not_delivered:'Жауап сақталды, бірақ жеткізілмеді',t_empty:'Өтініштер әзірге жоқ',t_all:'Барлығы',t_ticket:'Өтініш',t_saved:'Сақталды',
  u_note:'Алушыға жетпеген соңғы 7 күндегі хабарламалар көрсетілген. Хабарлама мәтіні көрсетілмейді.',u_empty:'Жеткізілмеген хабарлама жоқ',u_attempts:'әрекет',
  u_reason:{blocked:'Пайдаланушы ботты бұғаттады',failed:'Telegram хабарламаны қабылдамады',unknown:'Нәтиже белгісіз, қайталанбайды',retry:'Қайталауды күтуде',sending:'Жіберілуде',pending:'Жіберуді күтуде'}
@@ -43,7 +43,7 @@ az:{
  hist_h:'Ödəniş tarixçəsi',hist_empty:'Hələ ödəniş yoxdur',days:n=>`${n} gün`,
  pay_status:{manual:'Dəstək yeniləyib',paid:'Ödənilib',bonus:'Bonus',pending:'Gözləyir',failed:'Xəta',refunded:'Geri qaytarılıb'},
  err:'Abunə məlumatları yüklənmədi',retry:'Təkrar et',
- nav_support:'Dəstək',nav_undelivered:'Çatdırılmayıb',
+ nav_support:'Dəstək',nav_undelivered:'Çatdırılmayıb',nav_bot:'Bot',bot:{h:'Bot mətnləri',note:'Yalnız cüt <b> və <i> teqlərinə icazə var. Boş mətn standart mətni qaytarır.',keys:{help_specialist:'Mütəxəssis üçün /help',help_client:'Müştəri üçün /help',welcome_first:'İlk salamlama',support_ask:'Dəstəyə dəvət'},def:'Standart mətn',ver:v=>v?`Versiya ${v}`:'Standart',preview:'Önizləmə',save:'Yadda saxla',rollback:'Geri qaytar',saved:'Saxlanıldı',lang:'Dil'},
  t_status:{new:'Yeni',in_progress:'İşdə',closed:'Bağlı'},t_role:{specialist:'Mütəxəssis',client:'Müştəri'},t_reply_ph:'İstifadəçiyə cavab',t_send:'Cavab ver',t_work:'İşə götür',t_close:'Bağla',t_sent:'Cavab göndərildi',t_not_delivered:'Cavab saxlanıldı, lakin çatdırılmadı',t_empty:'Hələ müraciət yoxdur',t_all:'Hamısı',t_ticket:'Müraciət',t_saved:'Saxlanıldı',
  u_note:'Son 7 gündə alıcıya çatmayan mesajlar göstərilir. Mesajın mətni göstərilmir.',u_empty:'Çatdırılmayan mesaj yoxdur',u_attempts:'cəhd',
  u_reason:{blocked:'İstifadəçi botu bloklayıb',failed:'Telegram mesajı qəbul etmədi',unknown:'Nəticə bəlli deyil, təkrar edilmir',retry:'Təkrar cəhd gözləyir',sending:'Göndərilir',pending:'Göndərilməsi gözlənilir'}
@@ -59,7 +59,7 @@ uz:{
  hist_h:'To‘lovlar tarixi',hist_empty:'Hozircha to‘lovlar yo‘q',days:n=>`${n} kun`,
  pay_status:{manual:'Yordam uzaytirdi',paid:'To‘langan',bonus:'Bonus',pending:'Kutilmoqda',failed:'Xato',refunded:'Qaytarilgan'},
  err:'Obuna ma’lumotlari yuklanmadi',retry:'Takrorlash',
- nav_support:'Yordam',nav_undelivered:'Yetkazilmadi',
+ nav_support:'Yordam',nav_undelivered:'Yetkazilmadi',nav_bot:'Bot',bot:{h:'Bot matnlari',note:'Faqat juft <b> va <i> teglariga ruxsat. Bo‘sh matn standart matnni qaytaradi.',keys:{help_specialist:'Mutaxassis uchun /help',help_client:'Mijoz uchun /help',welcome_first:'Birinchi salomlashuv',support_ask:'Yordamga taklif'},def:'Standart matn',ver:v=>v?`${v}-versiya`:'Standart',preview:'Oldindan ko‘rish',save:'Saqlash',rollback:'Qaytarish',saved:'Saqlandi',lang:'Til'},
  t_status:{new:'Yangi',in_progress:'Jarayonda',closed:'Yopilgan'},t_role:{specialist:'Mutaxassis',client:'Mijoz'},t_reply_ph:'Foydalanuvchiga javob',t_send:'Javob berish',t_work:'Ishga olish',t_close:'Yopish',t_sent:'Javob yuborildi',t_not_delivered:'Javob saqlandi, lekin yetkazilmadi',t_empty:'Hozircha murojaatlar yo‘q',t_all:'Hammasi',t_ticket:'Murojaat',t_saved:'Saqlandi',
  u_note:'Oxirgi 7 kunda qabul qiluvchiga yetmagan xabarlar ko‘rsatilgan. Xabar matni ko‘rsatilmaydi.',u_empty:'Yetkazilmagan xabarlar yo‘q',u_attempts:'urinish',
  u_reason:{blocked:'Foydalanuvchi botni bloklagan',failed:'Telegram xabarni qabul qilmadi',unknown:'Natija noma’lum, takrorlanmaydi',retry:'Qayta urinishni kutmoqda',sending:'Yuborilmoqda',pending:'Yuborilishi kutilmoqda'}
